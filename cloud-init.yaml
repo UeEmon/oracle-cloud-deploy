@@ -1,0 +1,17 @@
+#cloud-config
+# Ubuntu 24.04 (aarch64 or x86_64) on Oracle Cloud Infrastructure.
+package_update: true
+packages:
+  - docker.io
+  - docker-compose-v2
+  - git
+  - iptables-persistent
+runcmd:
+  # OCI Ubuntu images reject inbound traffic except SSH in the host firewall.
+  - iptables -I INPUT 5 -p tcp --dport 80 -m state --state NEW -j ACCEPT
+  - iptables -I INPUT 5 -p tcp --dport 443 -m state --state NEW -j ACCEPT
+  - iptables -I INPUT 5 -p udp --dport 443 -j ACCEPT
+  - netfilter-persistent save
+  - systemctl enable --now docker
+  - usermod -aG docker ubuntu
+  - sudo -u ubuntu git clone https://github.com/UeEmon/oracle-cloud-deploy.git /home/ubuntu/oracle-cloud-deploy

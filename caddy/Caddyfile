@@ -1,0 +1,27 @@
+# Certificates for every site are obtained from Let's Encrypt automatically.
+
+# CHUCK has no login of its own, so every request needs Basic auth.
+# Host is passed through unchanged, which CHUCK's same-origin checks need.
+{$CHUCK_DOMAIN} {
+	basic_auth {
+		{$CHUCK_USER} {$CHUCK_PASSWORD_HASH}
+	}
+	encode gzip
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options nosniff
+		Referrer-Policy same-origin
+		-Server
+	}
+	reverse_proxy hf-propagation:8000
+}
+
+# 要件ナビ has its own login (AUTH_MODE=local in env/arn.env).
+{$ARN_DOMAIN} {
+	encode gzip
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		-Server
+	}
+	reverse_proxy app:8787
+}
