@@ -18,24 +18,26 @@
 | 対象 | 状態 |
 |---|---|
 | テナンシー | `UeEmonCloud`、従量課金アカウント、ホーム ap-tokyo-1（AD-1のみ） |
-| ネットワーク | 作成済み：VCN `chuck-vcn` 10.0.0.0/16、公開サブネット10.0.0.0/24、インターネットゲートウェイ、既定ルート |
-| セキュリティ・リスト | TCP 80／443・UDP 443は0.0.0.0/0、TCP 22は所有者のMacのIP（作成時 60.120.190.28/32）だけ |
-| VM `chuck-1` | **未作成**。2 OCPU・12GB、1 OCPU・6GBとも「Out of host capacity」 |
-| 自動再試行 | 所有者のMacで実行中。10分おき、A1 1 OCPU・6GBだけ、最長6時間（2026-10-17 01:48 UTCごろまで）。ログは `~/.chuck-deploy/launch-retry.log` |
+| ネットワーク | 作成済み：VCN `chuck-vcn` 10.0.0.0/16、公開サブネット `chuck-public` 10.0.0.0/24、インターネットゲートウェイ `chuck-igw`（既定ルート表に0.0.0.0/0） |
+| セキュリティ・リスト `chuck-sl` | TCP 80／443・UDP 443は0.0.0.0/0、TCP 22は所有者のMacのIP（作成時 60.120.190.28/32）だけ、ICMP 3/4 |
+| VM `chuck-1`、予約済み公開IP | **未作成**。2026-10-16 19:34 UTC以降、2 OCPU・12GB、1 OCPU・6GBとも「Out of host capacity」 |
+| 自動再試行 | 所有者のMacで `caffeinate -i ~/.chuck-deploy/bin/launch-retry.sh` を実行中。10分おき・最長36回（2026-10-17 01:48 UTCごろまで）、A1 1 OCPU・6GB、Canonical-Ubuntu-24.04-aarch64-2026.09.18-0、ブート50GB、公開IPなしで作成。成功時は `INST=` を `~/.chuck-deploy/oci-ids.env` に追記して終了。ログは `~/.chuck-deploy/launch-retry.log` |
 | 再試行のユーザーデータ | CHUCKリポジトリにあった旧cloud-init（`docker.io` とCHUCKのクローン）。本リポジトリの `cloud-init.yaml` へは差し替えていない |
 | ログイン | MacのOCI CLIはブラウザ・セッション（`oci session authenticate`）。`oci session refresh` で延長中。切れたら所有者のブラウザ・ログインが必要 |
 
 Mac（所有者のMacBook Air、arm64）に置いたもの：
 
 - SSH鍵 `~/.ssh/chuck_oci`
-- CHUCKのBasic認証パスワード `~/.chuck-deploy/password`（権限600）
+- CHUCKのBasic認証パスワード `~/.chuck-deploy/password` とハッシュ `password.bcrypt`（権限600）
+- 各資源のOCID `~/.chuck-deploy/oci-ids.env`（リポジトリには入れない）
+- OCI CLI 3.95.0（Homebrew）、`OCI_CLI_AUTH=security_token`、プロファイル DEFAULT
 - 再試行スクリプト `~/.chuck-deploy/bin/launch-retry.sh`
 
 MacにはGitHubの認証がない。GitHubへの書き込みはクラウド側のスレッドで行う。
 
 ## 3 VMができた後の手順
 
-1. 予約済み公開IPをVMに付ける。
+1. 予約済み公開IPを作り、`chuck-1` のプライマリVNICのプライベートIPに割り当てる。`cloud-init status --wait` で初期設定の完了を待つ。
 2. 旧cloud-initで入るのは Ubuntu の `docker.io` と古い `docker-compose-v2`。`include` の `env_file` にはCompose 2.24以上が必要なので、`docker compose version` を確認し、足りなければDocker公式リポジトリの `docker-compose-plugin` を入れる（本リポジトリの `cloud-init.yaml` と同じ手順）。
 3. `/home/ubuntu/VOCAP-COMPATIBILITY-`（旧cloud-initのクローン）は不要なので消し、本リポジトリをクローンする。
 4. READMEの「初回の展開」に従う。秘密の値（パスワードのハッシュ、`MASTER_KEY`、`LOCAL_SETUP_TOKEN`）はMacで作り、控えをMacの `~/.chuck-deploy` に権限600で残す。
