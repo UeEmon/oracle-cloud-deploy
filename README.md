@@ -15,6 +15,8 @@ Oracle Cloud（Always Free）のVM 1台で、複数の開発中システムを�
 - 各システムのWeb・DB・ゲートウェイは、VM内の127.0.0.1にだけ公開する。管理画面は `ssh -L` で開く。
 - `compose.yaml` が各アプリのcompose を `include` で読み込む。アプリ側の設定は変更しない。
 
+作業の経緯と現在の状態は [引き継ぎ書](docs/HANDOVER.md) を参照。
+
 ## Oracle Cloudの資源
 
 | 資源 | 内容 |
@@ -33,6 +35,7 @@ cd ~/oracle-cloud-deploy
 bin/fetch-apps.sh
 cp env.example .env               # ドメインとCHUCKのパスワードのハッシュ
 cp env/arn.env.example env/arn.env  # MASTER_KEY、LOCAL_SETUP_TOKEN、PUBLIC_URL
+bin/check-config.sh               # 要件ナビが開発用ログインのまま公開されないことを確認
 docker compose up -d --build
 ```
 
@@ -47,7 +50,7 @@ docker compose up -d --build
 ## 更新と停止
 
 ```sh
-bin/fetch-apps.sh && docker compose up -d --build
+bin/fetch-apps.sh && bin/check-config.sh && docker compose up -d --build
 docker compose down        # -v は全システムのデータと証明書を消すので使わない
 ```
 

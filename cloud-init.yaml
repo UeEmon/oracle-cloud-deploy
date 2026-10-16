@@ -1,17 +1,24 @@
 #cloud-config
 # Ubuntu 24.04 (aarch64 or x86_64) on Oracle Cloud Infrastructure.
+# Docker comes from Docker's own apt repository: compose.yaml needs
+# Compose 2.24 or later for include with env_file.
 package_update: true
 packages:
-  - docker.io
-  - docker-compose-v2
+  - ca-certificates
   - git
   - iptables-persistent
+apt:
+  sources:
+    docker.list:
+      source: deb [signed-by=$KEY_FILE] https://download.docker.com/linux/ubuntu $RELEASE stable
+      keyid: 9DC858229FC7DD38854AE2D88D81803C0EBFCD88
 runcmd:
   # OCI Ubuntu images reject inbound traffic except SSH in the host firewall.
   - iptables -I INPUT 5 -p tcp --dport 80 -m state --state NEW -j ACCEPT
   - iptables -I INPUT 5 -p tcp --dport 443 -m state --state NEW -j ACCEPT
   - iptables -I INPUT 5 -p udp --dport 443 -j ACCEPT
   - netfilter-persistent save
+  - DEBIAN_FRONTEND=noninteractive apt-get install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
   - systemctl enable --now docker
   - usermod -aG docker ubuntu
   - sudo -u ubuntu git clone https://github.com/UeEmon/oracle-cloud-deploy.git /home/ubuntu/oracle-cloud-deploy
