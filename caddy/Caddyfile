@@ -1,8 +1,23 @@
 # Certificates for every site are obtained from Let's Encrypt automatically.
 
-# CHUCK has no login of its own, so every request needs Basic auth.
+# CHUCK public edition: anyone may use it. The admin header is always removed
+# here, so visitors cannot claim to be the administrator.
 # Host is passed through unchanged, which CHUCK's same-origin checks need.
 {$CHUCK_DOMAIN} {
+	encode gzip
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options nosniff
+		Referrer-Policy same-origin
+		-Server
+	}
+	reverse_proxy hf-propagation:8000 {
+		header_up -X-Chuck-Admin
+	}
+}
+
+# CHUCK admin site: Basic auth, then the admin header the app trusts.
+admin.{$CHUCK_DOMAIN} {
 	basic_auth {
 		{$CHUCK_USER} {$CHUCK_PASSWORD_HASH}
 	}
@@ -13,7 +28,9 @@
 		Referrer-Policy same-origin
 		-Server
 	}
-	reverse_proxy hf-propagation:8000
+	reverse_proxy hf-propagation:8000 {
+		header_up X-Chuck-Admin {$CHUCK_ADMIN_SECRET}
+	}
 }
 
 # 要件ナビ has its own login (AUTH_MODE=local in env/arn.env).

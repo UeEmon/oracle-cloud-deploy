@@ -1,13 +1,16 @@
 # oracle-cloud-deploy
 
-Oracle Cloud（Always Free）のVM 1台で、複数の開発中システムを動かすための構成です。各システムのコードと設定はそれぞれのリポジトリに置き、このリポジトリはVMとHTTPSの入口だけを管理します。
+Oracle Cloud（東京リージョン、A1は無料枠内）のVM 1台で、複数の開発中システムを動かすための構成です。各システムのコードと設定はそれぞれのリポジトリに置き、このリポジトリはVMとHTTPSの入口だけを管理します。
 
 | システム | リポジトリ | URLの例 | ログイン |
 |---|---|---|---|
-| CHUCK | UeEmon/VOCAP-COMPATIBILITY- | `https://<IP>.sslip.io` | Caddyのパスワード（本体にログインがないため） |
+| CHUCK（公開版） | UeEmon/CHUCK-public- | `https://<IP>.sslip.io` | なし（誰でも使える。計算回数の制限あり） |
+| CHUCK 管理サイト | 同上 | `https://admin.<IP>.sslip.io` | Caddyのパスワード |
 | 要件ナビ | UeEmon/ai-requirements-navigator | `https://arn.<IP>.sslip.io` | 要件ナビ自身のログイン（`AUTH_MODE=local`） |
 
 `<IP>` は予約済み公開IPのドットをハイフンにしたもの。独自ドメインがあれば置き換える。
+
+CHUCKは公開版（`compose.public.yaml` で `public_server.py` を起動）を使う。管理者かどうかは、管理サイトでだけCaddyが付ける `X-Chuck-Admin` ヘッダー（値は `CHUCK_ADMIN_SECRET`）で判定し、公開サイトでは利用者が送っても消す。本家（UeEmon/VOCAP-COMPATIBILITY-）は非公開。公開版は UeEmon/CHUCK-public- に置き、本家の履歴は含めない。
 
 ## 構成
 
@@ -26,25 +29,27 @@ Oracle Cloud（Always Free）のVM 1台で、複数の開発中システムを�
 | セキュリティ・リスト | TCP 80／443、UDP 443は全体から。TCP 22は管理者のIPからだけ |
 | VM | `VM.Standard.A1.Flex`、Ubuntu 24.04 aarch64、ブート50GB、予約済み公開IP、ユーザーデータ `cloud-init.yaml` |
 
-無料枠はA1合計4 OCPU・24GB、ブロック・ストレージ合計200GB。アカウントは従量課金なので、超えた分は課金される。
+無料枠はA1合計4 OCPU・24GB（2026年6月以降、無料アカウントは2 OCPU・12GB）、ブロック・ストレージ合計200GB。アカウントは従量課金なので、超えた分は課金される。
 
 ## 初回の展開
 
 ```sh
 cd ~/oracle-cloud-deploy
 bin/fetch-apps.sh
-cp env.example .env               # ドメインとCHUCKのパスワードのハッシュ
+cp env.example .env               # ドメイン、CHUCK管理サイトのパスワードのハッシュ、CHUCK_ADMIN_SECRET、寄付の設定
 cp env/arn.env.example env/arn.env  # MASTER_KEY、LOCAL_SETUP_TOKEN、PUBLIC_URL
-bin/check-config.sh               # 要件ナビが開発用ログインのまま公開されないことを確認
+bin/check-config.sh               # 要件ナビが開発用ログインのまま、CHUCKが本家のまま公開されないことを確認
 docker compose up -d --build
 ```
 
-パスワードのハッシュは `docker run --rm caddy:2.8.4 caddy hash-password --plaintext '<パスワード>'` で作り、単引用符付きで書く。平文のパスワード、`MASTER_KEY`、`LOCAL_SETUP_TOKEN` はVMに置く `.env` 類と管理者の手元にだけ保管し、このリポジトリには入れない。
+パスワードのハッシュは `docker run --rm caddy:2.8.4 caddy hash-password --plaintext '<パスワード>'` で作り、単引用符付きで書く。平文のパスワード、`CHUCK_ADMIN_SECRET`、`GITHUB_SPONSORS_WEBHOOK_SECRET`、`MASTER_KEY`、`LOCAL_SETUP_TOKEN` はVMに置く `.env` 類と管理者の手元にだけ保管し、このリポジトリには入れない。
 
 ## 確認
 
-- `https://<CHUCKのドメイン>/` が認証なしで401、認証付きで200
-- CHUCKで東京→グアムを計算し、`docker compose restart` 後も履歴に残る
+- `https://<CHUCKのドメイン>/` が認証なしで200になり、AI設定などの管理機能は403
+- `https://<CHUCKのドメイン>/api/public-config` に `X-Chuck-Admin` を付けて送っても `admin` が `false`
+- `https://admin.<CHUCKのドメイン>/` が認証なしで401、認証付きで200になり、`/api/public-config` の `admin` が `true`
+- CHUCKで東京→グアムを計算し、`docker compose restart` 後も結果のURLで開ける
 - `https://<要件ナビのドメイン>/` で初期設定画面が開き、`LOCAL_SETUP_TOKEN` なしでは進めない
 
 ## 更新と停止
