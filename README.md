@@ -4,13 +4,13 @@ Oracle Cloud（東京リージョン、A1は無料枠内）のVM 1台で、複�
 
 | システム | リポジトリ | URLの例 | ログイン |
 |---|---|---|---|
-| CHUCK（公開版） | UeEmon/CHUCK | `https://<IP>.sslip.io` | なし（誰でも使える。計算回数の制限あり） |
+| CHUCK（公開版） | UeEmon/CHUCK-public- | `https://<IP>.sslip.io` | なし（誰でも使える。計算回数の制限あり） |
 | CHUCK 管理サイト | 同上 | `https://admin.<IP>.sslip.io` | Caddyのパスワード |
 | 要件ナビ | UeEmon/ai-requirements-navigator | `https://arn.<IP>.sslip.io` | 要件ナビ自身のログイン（`AUTH_MODE=local`） |
 
 `<IP>` は予約済み公開IPのドットをハイフンにしたもの。独自ドメインがあれば置き換える。
 
-CHUCKは公開版（`compose.public.yaml` で `public_server.py` を起動）を使う。管理者かどうかは、管理サイトでだけCaddyが付ける `X-Chuck-Admin` ヘッダー（値は `CHUCK_ADMIN_SECRET`）で判定し、公開サイトでは利用者が送っても消す。本家（UeEmon/VOCAP-COMPATIBILITY-）と、それを追う作業用フォーク（UeEmon/CHUCK-public-）は非公開で、UeEmon/CHUCK には履歴を含まない公開用のスナップショットだけを置く。
+CHUCKは公開版（`compose.public.yaml` で `public_server.py` を起動）を使う。管理者かどうかは、管理サイトでだけCaddyが付ける `X-Chuck-Admin` ヘッダー（値は `CHUCK_ADMIN_SECRET`）で判定し、公開サイトでは利用者が送っても消す。本家（UeEmon/VOCAP-COMPATIBILITY-）は非公開。公開版は UeEmon/CHUCK-public- に置き、本家の履歴は含めない。
 
 ## 構成
 

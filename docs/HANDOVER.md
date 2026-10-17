@@ -6,7 +6,7 @@
 
 - Oracle Cloudのホームリージョン東京（ap-tokyo-1）を使う。2026-10-17、所有者が「Always Freeのみ」の制約を解除し、従量課金アカウントでA1を無料枠内で取る方針にした。有料のVM種別や他リージョンへの切り替えは、引き続き所有者の指示を待つ。
 - VM 1台にCHUCKと要件ナビを相乗りさせる。公開の入口はCaddy 1つで、80／443だけを開ける。
-- CHUCKは公開版（UeEmon/CHUCK）を誰でも使える形で公開する。管理機能は `admin.<ドメイン>` に置き、CaddyのBasic認証の後で `X-Chuck-Admin` を付ける。本家と作業用フォーク（UeEmon/CHUCK-public-）は非公開のまま（所有者の指示、2026-10-17）。要件ナビは自前の `AUTH_MODE=local` を使い、`LOCAL_SETUP_TOKEN` を設定する。
+- CHUCKは公開版（UeEmon/CHUCK-public-）を誰でも使える形で公開する。管理機能は `admin.<ドメイン>` に置き、CaddyのBasic認証の後で `X-Chuck-Admin` を付ける。本家は非公開のまま、公開版は本家の履歴を含めずに公開する（所有者の指示、2026-10-17）。要件ナビは自前の `AUTH_MODE=local` を使い、`LOCAL_SETUP_TOKEN` を設定する。
 - 所有者は「80/443をインターネットに公開してよい」「要件ナビも同じVMに公開してよい」と明示的に許可済み。
 - 公開IPは予約済みIPを使い、URLは `<IP>.sslip.io`、`admin.<IP>.sslip.io`、`arn.<IP>.sslip.io` にする。
 - 当面は1 OCPU・6GBで作り、空きが出たら2 OCPU・12GBに戻す（所有者の指示）。
@@ -54,7 +54,7 @@ MacにはGitHubの認証がない。GitHubへの書き込みはクラウド側�
 
 ## 5 関連
 
-- CHUCK公開版：https://github.com/UeEmon/CHUCK（公開用スナップショット。設定は `docs/PUBLIC_DEPLOYMENT.md`、寄付は `docs/SPONSORS_SETUP.md`）
+- CHUCK公開版：https://github.com/UeEmon/CHUCK-public-（公開版。設定は `docs/PUBLIC_DEPLOYMENT.md`、寄付は `docs/SPONSORS_SETUP.md`）
 - CHUCK本家：https://github.com/UeEmon/VOCAP-COMPATIBILITY-（非公開。`docs/HANDOVER.md` にアプリ側の引き継ぎ）
 - 要件ナビ：https://github.com/UeEmon/ai-requirements-navigator（公開イメージ `ghcr.io/ueemon/ai-requirements-navigator` はarm64対応）
 - 無料枠の上限：A1合計4 OCPU・24GB、E2.1.Micro 2台、ブロック・ストレージ合計200GB、外向き通信 月10TB
