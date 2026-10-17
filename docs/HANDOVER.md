@@ -13,29 +13,33 @@
 - 検証が終わったら、確認なしで後片付けまで自動で行う（既存の資源には触れない）。所有者の指示。
 - パスワード、ハッシュ以外の鍵、`.env` 類はリポジトリに入れない。このリポジトリは公開。
 
-## 2 現在の状態（2026-10-16 20:00 UTC）
+## 2 現在の状態（2026-10-17 14:00 UTC）
 
 | 対象 | 状態 |
 |---|---|
-| テナンシー | `UeEmonCloud`、従量課金アカウント、ホーム ap-tokyo-1（AD-1のみ） |
-| ネットワーク | 作成済み：VCN `chuck-vcn` 10.0.0.0/16、公開サブネット `chuck-public` 10.0.0.0/24、インターネットゲートウェイ `chuck-igw`（既定ルート表に0.0.0.0/0） |
+| テナンシー | `UeEmonCloud`、従量課金（PAYG、UPGRADED を確認）、ホーム ap-tokyo-1（AD-1のみ） |
+| ネットワーク | VCN `chuck-vcn` 10.0.0.0/16、公開サブネット `chuck-public` 10.0.0.0/24、インターネットゲートウェイ `chuck-igw` |
 | セキュリティ・リスト `chuck-sl` | TCP 80／443・UDP 443は0.0.0.0/0、TCP 22は所有者のMacのIP（作成時 60.120.190.28/32）だけ、ICMP 3/4 |
-| VM `chuck-1`、予約済み公開IP | **未作成**。2026-10-16 19:34 UTC以降、2 OCPU・12GB、1 OCPU・6GBとも「Out of host capacity」 |
-| 自動再試行 | 所有者のMacで `caffeinate -i ~/.chuck-deploy/bin/launch-retry.sh` を実行中。10分おき・最長36回（2026-10-17 01:48 UTCごろまで）、A1 1 OCPU・6GB、Canonical-Ubuntu-24.04-aarch64-2026.09.18-0、ブート50GB、公開IPなしで作成。成功時は `INST=` を `~/.chuck-deploy/oci-ids.env` に追記して終了。ログは `~/.chuck-deploy/launch-retry.log` |
-| 再試行のユーザーデータ | CHUCKリポジトリにあった旧cloud-init（`docker.io` とCHUCKのクローン）。本リポジトリの `cloud-init.yaml` へは差し替えていない |
-| ログイン | MacのOCI CLIはブラウザ・セッション（`oci session authenticate`）。`oci session refresh` で延長中。切れたら所有者のブラウザ・ログインが必要 |
+| VM `chuck-1` | 2026-10-17 13:34 UTC作成、RUNNING。A1 1 OCPU・6GB、ブート50GB、プライベートIP 10.0.0.93 |
+| 予約済み公開IP `chuck-ip` | 168.110.7.225（chuck-1に割り当て済み） |
+| 公開URL | CHUCK `https://168-110-7-225.sslip.io`、管理 `https://admin.168-110-7-225.sslip.io`、要件ナビ `https://arn.168-110-7-225.sslip.io`。証明書はLet's Encrypt（2027-01-15まで） |
+| VMの構成 | Docker公式版（Compose v5.6.0）。旧cloud-initはIP割当前で外へ出られずパッケージ導入に失敗したため、本リポジトリの `cloud-init.yaml` の手順を手で実施。本リポジトリは `~/oracle-cloud-deploy` |
+| 寄付 | `CHUCK_DONATION_URL` と `GITHUB_SPONSORS_WEBHOOK_SECRET` は空。GitHub Sponsorsの審査が通ってから設定する |
+| 要件ナビ | 初期設定待ち（組織と最初の管理者は未作成）。所有者が `LOCAL_SETUP_TOKEN` で行う |
+| ログイン | MacのOCI CLIはブラウザ・セッション（`oci session authenticate --profile-name DEFAULT --region ap-tokyo-1`）。切れたら所有者のブラウザ・ログインが必要 |
 
-Mac（所有者のMacBook Air、arm64）に置いたもの：
+Mac（所有者のMacBook Air、arm64）に置いたもの（すべて権限600、リポジトリには入れない）：
 
-- SSH鍵 `~/.ssh/chuck_oci`
-- CHUCKのBasic認証パスワード `~/.chuck-deploy/password` とハッシュ `password.bcrypt`（権限600）
-- 各資源のOCID `~/.chuck-deploy/oci-ids.env`（リポジトリには入れない）
+- SSH鍵 `~/.ssh/chuck_oci`（`ssh -i ~/.ssh/chuck_oci ubuntu@168.110.7.225`）
+- CHUCK管理サイトのパスワード `~/.chuck-deploy/password` とハッシュ `password.bcrypt`
+- `~/.chuck-deploy/chuck_admin_secret`、`arn_master_key`、`arn_setup_token`（VMが使う値。同じフォルダの古い `master_key`・`local_setup_token` は使っていない）
+- 各資源のOCID `~/.chuck-deploy/oci-ids.env`（`INST`、`PIP`、`IP` を含む）
 - OCI CLI 3.95.0（Homebrew）、`OCI_CLI_AUTH=security_token`、プロファイル DEFAULT
-- 再試行スクリプト `~/.chuck-deploy/bin/launch-retry.sh`
+- 再試行スクリプト `~/.chuck-deploy/bin/launch-retry.sh`（成功して終了済み）
 
-MacにはGitHubの認証がない。GitHubへの書き込みはクラウド側のスレッドで行う。
+MacにはGitHubの認証がない。GitHubへの書き込みはクラウド側のスレッドで行う。MacのClaudeでOCIの資源を作る操作は、Macの自動許可で止まるため、所有者の明示の指示が要る。
 
-## 3 VMができた後の手順
+## 3 VMができた後の手順（2026-10-17、手順1～6は完了）
 
 1. 予約済み公開IPを作り、`chuck-1` のプライマリVNICのプライベートIPに割り当てる。`cloud-init status --wait` で初期設定の完了を待つ。
 2. 旧cloud-initで入るのは Ubuntu の `docker.io` と古い `docker-compose-v2`。`include` の `env_file` にはCompose 2.24以上が必要なので、`docker compose version` を確認し、足りなければDocker公式リポジトリの `docker-compose-plugin` を入れる（本リポジトリの `cloud-init.yaml` と同じ手順）。
@@ -50,7 +54,7 @@ MacにはGitHubの認証がない。GitHubへの書き込みはクラウド側�
 - CHUCKのDocker完成イメージは、Apple Silicon（arm64）のMacで検証済み（キャッシュなしビルド、両サービス起動、東京→グアム、CSV、再起動後の履歴、VOACAP比較で差0）。
 - Caddyの設定は `caddy validate` を通過。ローカルでの試験で、認証なし401・認証付き200、同一オリジンの保存は通り別オリジンは403になることを確認。
 - `docker compose config` で2システムの結合を確認。`bin/check-config.sh` は `AUTH_MODE=dev` のとき失敗することを確認。
-- 実VM上での起動、Let's Encryptの実証明書の取得は**未検証**。
+- 2026-10-17、実VM上でREADMEの「確認」をすべて通過（公開200・管理API 403、ヘッダー偽装無効、管理サイト401／200、東京→グアムと再起動後の結果URL、要件ナビのトークンなし403、5432・18083ほか外から不通、Let's Encryptの実証明書）。
 
 ## 5 関連
 
