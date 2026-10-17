@@ -3,7 +3,11 @@
 #   docker compose up -d --build
 # Each app keeps its own compose file and settings; this file only adds Caddy.
 include:
-  - path: apps/VOCAP-COMPATIBILITY-/compose.yaml
+  # The public edition: the app's own compose plus its public-mode override.
+  - path:
+      - apps/CHUCK/compose.yaml
+      - apps/CHUCK/compose.public.yaml
+    env_file: .env
   - path: apps/ai-requirements-navigator/deploy/docker/compose.yml
     env_file: env/arn.env
 
@@ -18,6 +22,7 @@ services:
       CHUCK_DOMAIN: "${CHUCK_DOMAIN:?set CHUCK_DOMAIN in .env}"
       CHUCK_USER: "${CHUCK_USER:?set CHUCK_USER in .env}"
       CHUCK_PASSWORD_HASH: "${CHUCK_PASSWORD_HASH:?set CHUCK_PASSWORD_HASH in .env}"
+      CHUCK_ADMIN_SECRET: "${CHUCK_ADMIN_SECRET:?set CHUCK_ADMIN_SECRET in .env}"
       ARN_DOMAIN: "${ARN_DOMAIN:?set ARN_DOMAIN in .env}"
     volumes:
       - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
