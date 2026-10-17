@@ -24,7 +24,8 @@
 | 予約済み公開IP `chuck-ip` | 168.110.7.225（chuck-1に割り当て済み） |
 | 公開URL | CHUCK `https://168-110-7-225.sslip.io`、管理 `https://admin.168-110-7-225.sslip.io`、要件ナビ `https://arn.168-110-7-225.sslip.io`。証明書はLet's Encrypt（2027-01-15まで） |
 | VMの構成 | Docker公式版（Compose v5.6.0）。旧cloud-initはIP割当前で外へ出られずパッケージ導入に失敗したため、本リポジトリの `cloud-init.yaml` の手順を手で実施。本リポジトリは `~/oracle-cloud-deploy` |
-| 寄付 | `CHUCK_DONATION_URL` と `GITHUB_SPONSORS_WEBHOOK_SECRET` は空。GitHub Sponsorsの審査が通ってから設定する |
+| 寄付 | 有効（GitHub Sponsors、1回 $5 のTier、Webhook登録済み）。秘密の値はMacの `~/.chuck-deploy/sponsors_webhook_secret` |
+| 運営費 | 動的グループ `chuck-cost-reader`（chuck-1のみ）とポリシー `chuck-cost-reader`（`read usage-reports`）を作成済み。`chuck-cost.timer` が毎日請求額を寄付メーターに送る（READMEの「運営費の自動反映」） |
 | 要件ナビ | 初期設定待ち（組織と最初の管理者は未作成）。所有者が `LOCAL_SETUP_TOKEN` で行う |
 | ログイン | MacのOCI CLIはブラウザ・セッション（`oci session authenticate --profile-name DEFAULT --region ap-tokyo-1`）。切れたら所有者のブラウザ・ログインが必要 |
 
