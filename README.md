@@ -59,6 +59,19 @@ bin/fetch-apps.sh && bin/check-config.sh && docker compose up -d --build
 docker compose down        # -v は全システムのデータと証明書を消すので使わない
 ```
 
+## 運営費の自動反映
+
+CHUCKの寄付メーターの「運営費の目安」は、`.env` の `CHUCK_MONTHLY_COST_USD`（固定分）に、Oracleの請求額を足した金額です。`bin/update-cost.sh` がVM自身の権限（インスタンス・プリンシパル）で請求額を読み、先月の合計と今月の途中額の大きい方をCHUCKに送ります。円の請求は `CHUCK_JPY_PER_USD` でドルに換算します。
+
+Oracle側に、このVMだけを含む動的グループ `chuck-cost-reader` と、ポリシー `Allow dynamic-group chuck-cost-reader to read usage-reports in tenancy` が必要です（読み取り専用）。毎日動かすには:
+
+```sh
+bin/update-cost.sh                       # 一度手で動かして結果を確認
+sudo cp systemd/chuck-cost.* /etc/systemd/system/
+sudo systemctl daemon-reload && sudo systemctl enable --now chuck-cost.timer
+journalctl -u chuck-cost.service -n 5    # 直近の結果
+```
+
 ## システムを追加するとき
 
 1. `bin/fetch-apps.sh` に取得先を追加する

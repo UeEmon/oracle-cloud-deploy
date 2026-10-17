@@ -1,0 +1,9 @@
+[Unit]
+Description=Send the Oracle bill to the CHUCK donation meter
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=ubuntu
+ExecStart=/home/ubuntu/oracle-cloud-deploy/bin/update-cost.sh
