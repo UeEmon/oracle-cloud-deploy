@@ -40,7 +40,7 @@ admin.{$CHUCK_DOMAIN} {
 		Strict-Transport-Security "max-age=31536000"
 		-Server
 	}
-	reverse_proxy app:8787
+	reverse_proxy {$ARN_UPSTREAM}
 }
 
 # HACS has no login of its own, so it sits behind the CHUCK admin password.
