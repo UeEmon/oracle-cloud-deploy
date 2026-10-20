@@ -10,6 +10,13 @@ include:
     env_file: .env
   - path: apps/ai-requirements-navigator/deploy/docker/compose.yml
     env_file: env/arn.env
+  # HACS has no login of its own; Caddy asks for the CHUCK admin password.
+  - path:
+      - apps/HACS/compose.yaml
+      - overrides/hacs.yaml
+  - path: apps/BACCHUS-SYSTEM/compose.yaml
+    env_file: env/bacchus.env
+# eNMEA2000 is started separately by bin/up.sh (see overrides/enmea.yaml).
 
 services:
   https-proxy:
@@ -28,12 +35,21 @@ services:
       - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy-data:/data
       - caddy-config:/config
+    networks: [default, edge]
     depends_on:
       - hf-propagation
       - app
+      - hacs
+      - receiver
+      - bacchus
     restart: unless-stopped
     security_opt:
       - no-new-privileges:true
+
+networks:
+  # Shared with the eNMEA2000 project so Caddy can reach its web screen.
+  edge:
+    name: edge
 
 volumes:
   caddy-data:

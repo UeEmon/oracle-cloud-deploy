@@ -42,3 +42,50 @@ admin.{$CHUCK_DOMAIN} {
 	}
 	reverse_proxy app:8787
 }
+
+# HACS has no login of its own, so it sits behind the CHUCK admin password.
+hacs.{$CHUCK_DOMAIN} {
+	basic_auth {
+		{$CHUCK_USER} {$CHUCK_PASSWORD_HASH}
+	}
+	encode gzip
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options nosniff
+		-Server
+	}
+	reverse_proxy hacs:8787
+}
+
+hacs-rx.{$CHUCK_DOMAIN} {
+	basic_auth {
+		{$CHUCK_USER} {$CHUCK_PASSWORD_HASH}
+	}
+	encode gzip
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options nosniff
+		-Server
+	}
+	reverse_proxy receiver:8788
+}
+
+# eNMEA2000 signs in with its own APP_TOKEN (env/enmea.env).
+nmea.{$CHUCK_DOMAIN} {
+	encode gzip
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		-Server
+	}
+	reverse_proxy enmea-web:80
+}
+
+# BACCHUS: the personal stock stays in the browser; the shared stock needs a token from env/bacchus.env.
+bacchus.{$CHUCK_DOMAIN} {
+	encode gzip
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		-Server
+	}
+	reverse_proxy bacchus:8000
+}

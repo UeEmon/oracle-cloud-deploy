@@ -17,7 +17,7 @@ main() {
 	[ "$state" != "$(cat .deployed 2>/dev/null)" ] || exit 0
 	echo "deploying: $state"
 	bin/check-config.sh
-	docker compose up -d --build
+	bin/up.sh
 	printf '%s\n' "$state" > .deployed
 	docker image prune -f >/dev/null
 	echo "deployed"
