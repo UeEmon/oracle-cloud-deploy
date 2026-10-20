@@ -1,0 +1,8 @@
+# HACS publishes 8787 like 要件ナビ; move its local ports out of the way. Caddy reaches it on the compose network.
+services:
+  hacs:
+    ports: !override
+      - "127.0.0.1:18787:8787"
+  receiver:
+    ports: !override
+      - "127.0.0.1:18788:8788"

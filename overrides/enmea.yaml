@@ -1,0 +1,18 @@
+# eNMEA2000 runs as its own compose project (its services are also called app and db).
+# Only Caddy may reach the web screen; the NMEA inputs stay on the VM until the owner opens them.
+services:
+  app:
+    ports: !override
+      - "127.0.0.1:18081:80/tcp"
+      - "127.0.0.1:10110:10110/udp"
+      - "127.0.0.1:10111:10111/tcp"
+    environment:
+      COOKIE_SECURE: "true"
+    networks:
+      default:
+      edge:
+        aliases: [enmea-web]
+networks:
+  edge:
+    external: true
+    name: edge

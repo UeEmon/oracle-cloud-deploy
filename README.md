@@ -7,6 +7,10 @@ Oracle Cloud（東京リージョン、A1は無料枠内）のVM 1台で、複�
 | CHUCK（公開版） | UeEmon/CHUCK-public- | `https://<IP>.sslip.io` | なし（誰でも使える。計算回数の制限あり） |
 | CHUCK 管理サイト | 同上 | `https://admin.<IP>.sslip.io` | Caddyのパスワード |
 | 要件ナビ | UeEmon/ai-requirements-navigator | `https://arn.<IP>.sslip.io` | 要件ナビ自身のログイン（`AUTH_MODE=local`） |
+| HACS 送信 | UeEmon/HACS | `https://hacs.<IP>.sslip.io` | Caddyのパスワード（CHUCK管理サイトと同じ） |
+| HACS 受信 | 同上 | `https://hacs-rx.<IP>.sslip.io` | 同上 |
+| eNMEA2000（NMEA Observatory本体） | UeEmon/eNMEA2000 | `https://nmea.<IP>.sslip.io` | `env/enmea.env` の `APP_TOKEN` |
+| BACCHUS-SYSTEM | UeEmon/BACCHUS-SYSTEM | `https://bacchus.<IP>.sslip.io` | 個人用はなし（ブラウザ内に保存）。共用は `env/bacchus.env` の `BACCHUS_USERS` のトークン |
 
 `<IP>` は予約済み公開IPのドットをハイフンにしたもの。独自ドメインがあれば置き換える。
 
@@ -39,8 +43,10 @@ bin/fetch-apps.sh
 cp env.example .env               # ドメイン、CHUCK管理サイトのパスワードのハッシュ、CHUCK_ADMIN_SECRET、寄付の設定
 cp env/arn.env.example env/arn.env  # MASTER_KEY、LOCAL_SETUP_TOKEN、PUBLIC_URL
 bin/check-config.sh               # 要件ナビが開発用ログインのまま、CHUCKが本家のまま公開されないことを確認
-docker compose up -d --build
+bin/up.sh                         # 本体の compose と、別プロジェクトの eNMEA2000 を起動
 ```
+
+`bin/fetch-apps.sh` は最後に `bin/init-secrets.sh` を呼び、所有者の入力が要らない `env/enmea.env`（`APP_TOKEN`、DBのパスワード）と `env/bacchus.env`（所有者用の共用トークン）を、なければ乱数で作る。既存のファイルは変えない。値はVMで `grep APP_TOKEN env/enmea.env` のように読む。
 
 パスワードのハッシュは `docker run --rm caddy:2.8.4 caddy hash-password --plaintext '<パスワード>'` で作り、単引用符付きで書く。平文のパスワード、`CHUCK_ADMIN_SECRET`、`GITHUB_SPONSORS_WEBHOOK_SECRET`、`MASTER_KEY`、`LOCAL_SETUP_TOKEN` はVMに置く `.env` 類と管理者の手元にだけ保管し、このリポジトリには入れない。
 
@@ -55,13 +61,13 @@ docker compose up -d --build
 ## 更新と停止
 
 ```sh
-bin/fetch-apps.sh && bin/check-config.sh && docker compose up -d --build
-docker compose down        # -v は全システムのデータと証明書を消すので使わない
+bin/fetch-apps.sh && bin/check-config.sh && bin/up.sh
+docker compose -p enmea down; docker compose down   # -v はデータと証明書を消すので使わない
 ```
 
 ## 自動更新
 
-`chuck-update.timer` が5分ごとに `bin/auto-update.sh` を動かします。このリポジトリを `git pull --ff-only` し、`bin/fetch-apps.sh` でCHUCKと要件ナビを取り込み、要件ナビのCIが公開したイメージを `docker compose pull app` で取得し、前回の反映から何か（コミットまたは要件ナビのイメージ）が変わっていれば `bin/check-config.sh` のあとに `docker compose up -d --build` します。設定チェックに失敗したときは反映せず、次の回にやり直します。反映した版は `.deployed` に記録します。
+`chuck-update.timer` が5分ごとに `bin/auto-update.sh` を動かします。このリポジトリを `git pull --ff-only` し、`bin/fetch-apps.sh` でCHUCKと要件ナビを取り込み、要件ナビのCIが公開したイメージを `docker compose pull app` で取得し、前回の反映から何か（コミットまたは要件ナビのイメージ）が変わっていれば `bin/check-config.sh` のあとに `bin/up.sh` します。設定チェックに失敗したときは反映せず、次の回にやり直します。反映した版は `.deployed` に記録します。
 
 ```sh
 sudo cp systemd/chuck-update.* /etc/systemd/system/
@@ -87,6 +93,6 @@ journalctl -u chuck-cost.service -n 5    # 直近の結果
 ## システムを追加するとき
 
 1. `bin/fetch-apps.sh` に取得先を追加する
-2. `compose.yaml` の `include` に、そのシステムのcomposeを追加する。ポートは127.0.0.1に限る
+2. `compose.yaml` の `include` に、そのシステムのcomposeを追加する。ポートは127.0.0.1に限る。ポートが他と重なるときは `overrides/` に `!override` で書き換えるファイルを置く。サービス名（`app`、`db` など）が他と重なるときは、eNMEA2000のように別プロジェクトにして `bin/up.sh` で起動し、`edge` ネットワークでCaddyとつなぐ
 3. `caddy/Caddyfile` にサイトを追加する。ログインがないシステムには `basic_auth` を付ける
 4. メモリとディスクが無料枠に収まるか確認する
