@@ -61,7 +61,7 @@ docker compose down        # -v は全システムのデータと証明書を消
 
 ## 自動更新
 
-`chuck-update.timer` が5分ごとに `bin/auto-update.sh` を動かします。このリポジトリを `git pull --ff-only` し、`bin/fetch-apps.sh` でCHUCKと要件ナビを取り込み、前回の反映から何かが変わっていれば `bin/check-config.sh` のあとに `docker compose up -d --build` します。設定チェックに失敗したときは反映せず、次の回にやり直します。反映した版は `.deployed` に記録します。
+`chuck-update.timer` が5分ごとに `bin/auto-update.sh` を動かします。このリポジトリを `git pull --ff-only` し、`bin/fetch-apps.sh` でCHUCKと要件ナビを取り込み、要件ナビのCIが公開したイメージを `docker compose pull app` で取得し、前回の反映から何か（コミットまたは要件ナビのイメージ）が変わっていれば `bin/check-config.sh` のあとに `docker compose up -d --build` します。設定チェックに失敗したときは反映せず、次の回にやり直します。反映した版は `.deployed` に記録します。
 
 ```sh
 sudo cp systemd/chuck-update.* /etc/systemd/system/
