@@ -59,6 +59,18 @@ bin/fetch-apps.sh && bin/check-config.sh && docker compose up -d --build
 docker compose down        # -v は全システムのデータと証明書を消すので使わない
 ```
 
+## 自動更新
+
+`chuck-update.timer` が5分ごとに `bin/auto-update.sh` を動かします。このリポジトリを `git pull --ff-only` し、`bin/fetch-apps.sh` でCHUCKと要件ナビを取り込み、前回の反映から何かが変わっていれば `bin/check-config.sh` のあとに `docker compose up -d --build` します。設定チェックに失敗したときは反映せず、次の回にやり直します。反映した版は `.deployed` に記録します。
+
+```sh
+sudo cp systemd/chuck-update.* /etc/systemd/system/
+sudo systemctl daemon-reload && sudo systemctl enable --now chuck-update.timer
+journalctl -u chuck-update.service -n 20    # 直近の結果
+```
+
+止めるときは `sudo systemctl disable --now chuck-update.timer`。`systemd/` の中身を変えたときは、上の `cp` からやり直します。
+
 ## 運営費の自動反映
 
 CHUCKの寄付メーターの「運営費の目安」は、`.env` の `CHUCK_MONTHLY_COST_USD`（固定分）に、Oracleの請求額を足した金額です。`bin/update-cost.sh` がVM自身の権限（インスタンス・プリンシパル）で請求額を読み、先月の合計と今月の途中額の大きい方をCHUCKに送ります。円の請求は `CHUCK_JPY_PER_USD` でドルに換算します。
