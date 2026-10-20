@@ -9,8 +9,11 @@ flock -n 9 || exit 0
 main() {
 	git pull --quiet --ff-only origin main
 	bin/fetch-apps.sh
+	# 要件ナビ runs the image its CI publishes, so a merge there shows up as a new image, not new source.
+	docker compose pull --quiet app
 	state="deploy $(git rev-parse HEAD)"
 	for app in apps/*/; do state="$state $(basename "$app") $(git -C "$app" rev-parse HEAD)"; done
+	state="$state app-image $(docker image inspect --format '{{.Id}}' "$(docker compose config --format json | python3 -c "import json,sys;print(json.load(sys.stdin)['services']['app']['image'])")")"
 	[ "$state" != "$(cat .deployed 2>/dev/null)" ] || exit 0
 	echo "deploying: $state"
 	bin/check-config.sh
