@@ -1,0 +1,10 @@
+[Unit]
+Description=Deploy newly merged changes of CHUCK, 要件ナビ and this repo
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=ubuntu
+ExecStart=/home/ubuntu/oracle-cloud-deploy/bin/auto-update.sh
+TimeoutStartSec=30min
