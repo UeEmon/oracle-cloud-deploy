@@ -1,0 +1,7 @@
+# eNMEA2000's web service is also called app and shares the edge network with Caddy,
+# so Caddy reaches 要件ナビ by this alias instead of the ambiguous name app.
+services:
+  app:
+    networks:
+      default:
+        aliases: [arn-app]
