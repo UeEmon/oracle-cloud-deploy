@@ -8,6 +8,8 @@ BACKUP_BUCKET=$(value BACKUP_BUCKET)
 BACKUP_KEEP_DAYS=$(value BACKUP_KEEP_DAYS)
 export BACKUP_BUCKET BACKUP_KEEP_DAYS
 out=$(mktemp -d)
+# The upload container runs as nobody and must read this folder.
+chmod 755 "$out"
 trap 'rm -rf "$out"' EXIT
 project=$(docker compose config --format json | python3 -c "import json,sys;print(json.load(sys.stdin)['name'])")
 # PostgreSQL: a consistent dump from the running database.
