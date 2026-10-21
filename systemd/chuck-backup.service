@@ -1,0 +1,9 @@
+[Unit]
+Description=Back up every system's data to Object Storage
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=ubuntu
+ExecStart=/home/ubuntu/oracle-cloud-deploy/bin/backup.sh

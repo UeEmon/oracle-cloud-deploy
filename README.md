@@ -90,9 +90,38 @@ sudo systemctl daemon-reload && sudo systemctl enable --now chuck-cost.timer
 journalctl -u chuck-cost.service -n 5    # 直近の結果
 ```
 
+## バックアップ
+
+`chuck-backup.timer` が毎日3:00（JST）ごろに `bin/backup.sh` を動かし、全システムのデータをObject Storageのバケット `chuck-backups`（`.env` の `BACKUP_BUCKET`）に `<日時>/` の下に保存します。`BACKUP_KEEP_DAYS`（既定14日）より古いものは消します。
+
+| ファイル | 中身 |
+|---|---|
+| `arn.pgdump`、`enmea.pgdump` | 要件ナビとeNMEA2000のPostgreSQL（`pg_dump --format=custom`） |
+| `hf-data.tar.gz`、`gateway-data.tar.gz` | CHUCKの計算結果・寄付台帳・位置情報（SQLiteはバックアップAPIで一貫した写しを取る） |
+| `artifacts.tar.gz` | 要件ナビの成果物ファイル |
+| `hacs_data.tar.gz`、`bacchus-data.tar.gz`、`enmea-raw-data.tar.gz` | HACSのプリセット、BACCHUSの在庫、eNMEA2000の受信ログ |
+
+秘密の値（`.env`、`env/*.env`）とCaddyの証明書は含めない。秘密の値の控えは所有者のMacの `~/.chuck-deploy` にある。
+
+Oracle側に、非公開のバケット `chuck-backups` と、chuck-1だけを含む動的グループ（`chuck-cost-reader` を流用）への書き込み権限が必要です。
+
+```
+Allow dynamic-group chuck-cost-reader to manage objects in tenancy where target.bucket.name='chuck-backups'
+```
+
+```sh
+bin/backup.sh                            # 一度手で動かして結果を確認
+sudo cp systemd/chuck-backup.* /etc/systemd/system/
+sudo systemctl daemon-reload && sudo systemctl enable --now chuck-backup.timer
+journalctl -u chuck-backup.service -n 5  # 直近の結果
+```
+
+戻すときは、Oracleのコンソールか `oci os object get` で取り出し、PostgreSQLは `pg_restore --clean --if-exists -U <ユーザー> -d <DB>`、ボリュームはサービスを止めてから `tar xzf` で中身を置き換える。
+
 ## システムを追加するとき
 
 1. `bin/fetch-apps.sh` に取得先を追加する
 2. `compose.yaml` の `include` に、そのシステムのcomposeを追加する。ポートは127.0.0.1に限る。ポートが他と重なるときは `overrides/` に `!override` で書き換えるファイルを置く。サービス名（`app`、`db` など）が他と重なるときは、eNMEA2000のように別プロジェクトにして `bin/up.sh` で起動し、`edge` ネットワークでCaddyとつなぐ
 3. `caddy/Caddyfile` にサイトを追加する。ログインがないシステムには `basic_auth` を付ける
 4. メモリとディスクが無料枠に収まるか確認する
+5. データを持つなら `bin/backup.sh` に追加する
