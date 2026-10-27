@@ -18,6 +18,9 @@ fetch ai-requirements-navigator https://github.com/UeEmon/ai-requirements-naviga
 fetch HACS https://github.com/UeEmon/HACS.git "${HACS_REF:-main}"
 fetch eNMEA2000 https://github.com/UeEmon/eNMEA2000.git "${ENMEA_REF:-main}"
 fetch BACCHUS-SYSTEM https://github.com/UeEmon/BACCHUS-SYSTEM.git "${BACCHUS_REF:-main}"
+fetch altpnt https://github.com/UeEmon/altpnt.git "${ALTPNT_REF:-main}"
 # 要件ナビ's compose reads env_file .env in its own folder.
 ln -sf ../../../../env/arn.env apps/ai-requirements-navigator/deploy/docker/.env
+# altpnt's compose reads env_file .env in its own folder too.
+ln -sf ../../env/altpnt.env apps/altpnt/.env
 bin/init-secrets.sh

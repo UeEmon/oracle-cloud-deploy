@@ -80,6 +80,20 @@ nmea.{$CHUCK_DOMAIN} {
 	reverse_proxy enmea-web:80
 }
 
+# altpnt (alternative-PNT simulator API) has no login of its own, so it sits behind the CHUCK admin password.
+altpnt.{$CHUCK_DOMAIN} {
+	basic_auth {
+		{$CHUCK_USER} {$CHUCK_PASSWORD_HASH}
+	}
+	encode gzip
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options nosniff
+		-Server
+	}
+	reverse_proxy altpnt-api:8080
+}
+
 # BACCHUS: the personal stock stays in the browser; the shared stock needs a token from env/bacchus.env.
 bacchus.{$CHUCK_DOMAIN} {
 	encode gzip

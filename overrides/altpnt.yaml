@@ -1,0 +1,15 @@
+# altpnt runs as its own compose project (its service names cloud / edge / litellm are generic).
+# Only the API (cloud) is started; Caddy reaches it on the edge network as altpnt-api.
+services:
+  cloud:
+    ports: !override
+      - "127.0.0.1:18090:8080"
+    depends_on: !reset {}
+    networks:
+      cloud_net: {}
+      edge:
+        aliases: [altpnt-api]
+networks:
+  edge:
+    external: true
+    name: edge

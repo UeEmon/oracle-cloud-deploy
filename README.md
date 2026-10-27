@@ -11,6 +11,7 @@ Oracle Cloud（東京リージョン、A1は無料枠内）のVM 1台で、複�
 | HACS 受信 | 同上 | `https://hacs-rx.<IP>.sslip.io` | 同上 |
 | eNMEA2000（NMEA Observatory本体） | UeEmon/eNMEA2000 | `https://nmea.<IP>.sslip.io` | `env/enmea.env` の `APP_TOKEN` |
 | BACCHUS-SYSTEM | UeEmon/BACCHUS-SYSTEM | `https://bacchus.<IP>.sslip.io` | 個人用はなし（ブラウザ内に保存）。共用は `env/bacchus.env` の `BACCHUS_USERS` のトークン |
+| altpnt（代替PNTシミュレータAPI） | UeEmon/altpnt | `https://altpnt.<IP>.sslip.io/docs` | Caddyのパスワード（CHUCK管理サイトと同じ） |
 
 `<IP>` は予約済み公開IPのドットをハイフンにしたもの。独自ドメインがあれば置き換える。
 
@@ -23,6 +24,8 @@ CHUCKは公開版（`compose.public.yaml` で `public_server.py` を起動）を
 - `compose.yaml` が各アプリのcompose を `include` で読み込む。アプリ側の設定は変更しない。
 
 作業の経緯と現在の状態は [引き継ぎ書](docs/HANDOVER.md) を参照。
+
+altpntはeNMEA2000と同じく別プロジェクト（`-p altpnt`）で、API（`cloud`）だけを起動する。LLM解析（LiteLLM）とエッジのシナリオ実行は起動しない。使うときは `env/altpnt.env` に `ANTHROPIC_API_KEY` を書き、`docker compose -p altpnt --env-file env/altpnt.env -f apps/altpnt/docker-compose.yml -f overrides/altpnt.yaml up -d litellm`。altpntのビルドに失敗しても、他のシステムの更新は止まらない。保存するデータがないのでバックアップの対象外。
 
 ## Oracle Cloudの資源
 
