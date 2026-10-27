@@ -14,4 +14,10 @@ command=$(printf '%s' "$config" | python3 -c "import json,sys;print(' '.join(jso
 [ "$command" = "python public_server.py" ] || { echo "hf-propagation command is '$command', expected 'python public_server.py'" >&2; exit 1; }
 secret=$(printf '%s' "$config" | python3 -c "import json,sys;print(json.load(sys.stdin)['services']['hf-propagation']['environment'].get('CHUCK_ADMIN_SECRET',''))")
 [ "${#secret}" -ge 32 ] || { echo "CHUCK_ADMIN_SECRET must be 32 or more characters" >&2; exit 1; }
+# altpnt's API has no login: it must stay on 127.0.0.1 and be reached only through Caddy.
+if [ -f apps/altpnt/docker-compose.yml ]; then
+	bind=$(docker compose -p altpnt --env-file env/altpnt.env -f apps/altpnt/docker-compose.yml -f overrides/altpnt.yaml config --format json \
+		| python3 -c "import json,sys;print(' '.join(str(p.get('host_ip')) for p in json.load(sys.stdin)['services']['cloud'].get('ports',[])))")
+	[ "$bind" = "127.0.0.1" ] || { echo "altpnt cloud ports bind to '$bind', expected '127.0.0.1'" >&2; exit 1; }
+fi
 echo "config OK"

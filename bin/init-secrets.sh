@@ -14,3 +14,8 @@ if [ ! -f env/bacchus.env ]; then
 	printf "BACCHUS_USERS='{\"%s\": \"owner\"}'\nGEMINI_API_KEY=\nGEMINI_MODEL=\n" "$(openssl rand -hex 24)" > env/bacchus.env
 	echo "created env/bacchus.env"
 fi
+if [ ! -f env/altpnt.env ]; then
+	# LiteLLM (LLM analysis) stays off on this VM; add ANTHROPIC_API_KEY here and start it by hand if wanted.
+	printf 'LITELLM_MASTER_KEY=sk-%s\nANTHROPIC_API_KEY=\nOPENAI_API_KEY=\nOLLAMA_API_BASE=\nCLOUD_BIND=127.0.0.1\n' "$(openssl rand -hex 24)" > env/altpnt.env
+	echo "created env/altpnt.env"
+fi
