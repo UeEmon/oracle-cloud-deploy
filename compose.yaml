@@ -45,6 +45,7 @@ services:
     networks: [default, edge]
     depends_on:
       - hf-propagation
+      - position-gateway
       - app
       - hacs
       - receiver

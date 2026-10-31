@@ -1,7 +1,8 @@
 # CHUCK position gateway: receive NMEA 0183 over TCP/UDP from devices on the internet.
 # The host port is 10120 because eNMEA2000 already holds 10110 on this VM (overrides/enmea.yaml).
 # Every sender must send its station's stream key; an IP address alone is not accepted
-# (bin/check-config.sh refuses to start otherwise). The web screen and APIs stay on 127.0.0.1.
+# (bin/check-config.sh refuses to start otherwise). The web screen and APIs stay on 127.0.0.1;
+# Caddy publishes only the admin page at https://gateway.<CHUCK_DOMAIN>, so its session cookie is Secure.
 services:
   position-gateway:
     ports: !override
@@ -11,3 +12,4 @@ services:
     environment:
       HF_GATEWAY_NMEA_STREAM: "1"
       HF_GATEWAY_NMEA_REQUIRE_KEY: "1"
+      HF_GATEWAY_UI_SECURE_COOKIE: "1"
