@@ -52,6 +52,26 @@ data.{$CHUCK_DOMAIN} {
 	}
 }
 
+# CHUCK position gateway: only its admin page (own password, HF_GATEWAY_UI_PASSWORD).
+# The token-protected position APIs (/api/*, /internal/*) stay inside; devices send NMEA to TCP/UDP 10120.
+# Host is passed through for the same-origin check.
+gateway.{$CHUCK_DOMAIN} {
+	encode gzip
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options nosniff
+		Referrer-Policy same-origin
+		-Server
+	}
+	@admin path / /gateway.js /style.css /i18n.js /i18n-messages.js /chuck-icon.png /favicon.png /ui/*
+	handle @admin {
+		reverse_proxy position-gateway:8001
+	}
+	handle {
+		respond 404
+	}
+}
+
 # 要件ナビ has its own login (AUTH_MODE=local in env/arn.env).
 {$ARN_DOMAIN} {
 	encode gzip

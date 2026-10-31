@@ -7,6 +7,7 @@ Oracle Cloud（東京リージョン、A1は無料枠内）のVM 1台で、複�
 | CHUCK（公開版） | UeEmon/CHUCK-public- | `https://<IP>.sslip.io` | なし（誰でも使える。計算回数の制限あり） |
 | CHUCK 管理サイト | 同上 | `https://admin.<IP>.sslip.io` | Caddyのパスワード |
 | CHUCK 公開データ取得用コンテナの管理画面 | 同上 | `https://data.<IP>.sslip.io` | `HF_PUBLIC_DATA_UI_PASSWORD`（取得用コンテナ自身のログイン）。CHUCK連携用の `/api/*` は公開しない |
+| CHUCK 位置ゲートウェイの管理画面 | 同上 | `https://gateway.<IP>.sslip.io` | `HF_GATEWAY_UI_PASSWORD`（ゲートウェイ自身のログイン）。位置のAPIは公開しない。機器はTCP・UDP 10120へ送る |
 | 要件ナビ | UeEmon/ai-requirements-navigator | `https://arn.<IP>.sslip.io` | 要件ナビ自身のログイン（`AUTH_MODE=local`） |
 | HACS 送信 | UeEmon/HACS | `https://hacs.<IP>.sslip.io` | Caddyのパスワード（CHUCK管理サイトと同じ） |
 | HACS 受信 | 同上 | `https://hacs-rx.<IP>.sslip.io` | 同上 |
@@ -59,11 +60,7 @@ bin/up.sh                         # 本体の compose と、別プロジェク�
 
 船舶・航空機・車両の機器は、`<公開IP>:10120` へTCPまたはUDPでNMEA 0183を送ります。最初の1行（UDPは各データグラムの1行目）に局の受信キーを送ります。受信キーはゲートウェイの管理画面で発行します。
 
-```sh
-ssh -i ~/.ssh/chuck_oci -L 18083:127.0.0.1:18083 ubuntu@<公開IP>   # http://localhost:18083/ を開く
-```
-
-管理画面のログインには `.env` の `HF_GATEWAY_UI_PASSWORD`（16文字以上）が要ります。本体の移動局表示には `HF_POSITION_GATEWAY_TOKEN`、HTTPでの送信には `HF_POSITION_INGEST_TOKEN`（どちらも32文字以上で別の値）を設定します。機能確認はCHUCKの `scripts/gateway_simulator.py check --url http://localhost:18083 --nmea-host <公開IP> --nmea-port 10120` で行えます（CHUCKの `docs/GATEWAY_SIMULATOR.md`）。
+管理画面は `https://gateway.<CHUCKのドメイン>/` で開きます（Caddyは管理画面のファイルと `/ui/*` だけを通し、位置のAPIは404）。ログインには `.env` の `HF_GATEWAY_UI_PASSWORD`（16文字以上）が要ります。本体の移動局表示には `HF_POSITION_GATEWAY_TOKEN`、HTTPでの送信には `HF_POSITION_INGEST_TOKEN`（どちらも32文字以上で別の値）を設定します。機能確認はCHUCKの `scripts/gateway_simulator.py check --url http://localhost:18083 --nmea-host <公開IP> --nmea-port 10120` で行えます（CHUCKの `docs/GATEWAY_SIMULATOR.md`）。
 
 ## 確認
 
