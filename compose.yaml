@@ -36,7 +36,9 @@ services:
       # Not "app": eNMEA2000's app is also on the edge network (see overrides/arn.yaml).
       ARN_UPSTREAM: arn-app:8787
     volumes:
-      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      # The directory, not the file: git pull replaces the Caddyfile with a new inode, which a
+      # single-file bind mount never sees, so the reload in bin/up.sh would keep the old config.
+      - ./caddy:/etc/caddy:ro
       - caddy-data:/data
       - caddy-config:/config
     networks: [default, edge]
