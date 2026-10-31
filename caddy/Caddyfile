@@ -72,6 +72,22 @@ gateway.{$CHUCK_DOMAIN} {
 	}
 }
 
+# CHUCK gateway simulator control panel: no login of its own, so it sits behind the CHUCK admin password.
+# Host is passed through; the panel answers only to this name (--allow-host).
+sim.{$CHUCK_DOMAIN} {
+	basic_auth {
+		{$CHUCK_USER} {$CHUCK_PASSWORD_HASH}
+	}
+	encode gzip
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options nosniff
+		Referrer-Policy same-origin
+		-Server
+	}
+	reverse_proxy gateway-simulator:8090
+}
+
 # 要件ナビ has its own login (AUTH_MODE=local in env/arn.env).
 {$ARN_DOMAIN} {
 	encode gzip

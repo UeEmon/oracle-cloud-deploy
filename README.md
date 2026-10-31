@@ -8,6 +8,7 @@ Oracle Cloud（東京リージョン、A1は無料枠内）のVM 1台で、複�
 | CHUCK 管理サイト | 同上 | `https://admin.<IP>.sslip.io` | Caddyのパスワード |
 | CHUCK 公開データ取得用コンテナの管理画面 | 同上 | `https://data.<IP>.sslip.io` | `HF_PUBLIC_DATA_UI_PASSWORD`（取得用コンテナ自身のログイン）。CHUCK連携用の `/api/*` は公開しない |
 | CHUCK 位置ゲートウェイの管理画面 | 同上 | `https://gateway.<IP>.sslip.io` | `HF_GATEWAY_UI_PASSWORD`（ゲートウェイ自身のログイン）。位置のAPIは公開しない。機器はTCP・UDP 10120へ送る |
+| CHUCK 位置ゲートウェイの試験シミュレーター（管制画面） | 同上 | `https://sim.<IP>.sslip.io` | Caddyのパスワード（CHUCK管理サイトと同じ）。サーバー内からゲートウェイへ送る |
 | 要件ナビ | UeEmon/ai-requirements-navigator | `https://arn.<IP>.sslip.io` | 要件ナビ自身のログイン（`AUTH_MODE=local`） |
 | HACS 送信 | UeEmon/HACS | `https://hacs.<IP>.sslip.io` | Caddyのパスワード（CHUCK管理サイトと同じ） |
 | HACS 受信 | 同上 | `https://hacs-rx.<IP>.sslip.io` | 同上 |
