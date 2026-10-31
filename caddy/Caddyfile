@@ -33,6 +33,25 @@ admin.{$CHUCK_DOMAIN} {
 	}
 }
 
+# CHUCK public-data fetcher: only its admin page (own password, HF_PUBLIC_DATA_UI_PASSWORD).
+# The token-protected /api/* that CHUCK reads stays inside; Host is passed through for the same-origin check.
+data.{$CHUCK_DOMAIN} {
+	encode gzip
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options nosniff
+		Referrer-Policy same-origin
+		-Server
+	}
+	@admin path / /public-data.js /style.css /i18n.js /i18n-messages.js /chuck-icon.png /favicon.png /ui/*
+	handle @admin {
+		reverse_proxy public-data:8002
+	}
+	handle {
+		respond 404
+	}
+}
+
 # 要件ナビ has its own login (AUTH_MODE=local in env/arn.env).
 {$ARN_DOMAIN} {
 	encode gzip
