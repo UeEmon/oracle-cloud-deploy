@@ -22,6 +22,7 @@ CHUCKは公開版（`compose.public.yaml` で `public_server.py` を起動）を
 
 - 入口はCaddy 1つ。80／443だけを公開し、Let's Encryptの証明書を自動で取る。
 - 各システムのWeb・DB・ゲートウェイは、VM内の127.0.0.1にだけ公開する。管理画面は `ssh -L` で開く。
+- 例外はCHUCK位置ゲートウェイのNMEA 0183受信（TCP・UDP 10120、`overrides/chuck.yaml`）。機器がインターネットから直接送るため全体に開け、局ごとの受信キーを必須にする（`bin/check-config.sh` が確認）。eNMEA2000が10110を使っているので10120にしている。ゲートウェイの管理画面とHTTPのAPIは127.0.0.1のまま。
 - `compose.yaml` が各アプリのcompose を `include` で読み込む。アプリ側の設定は変更しない。
 
 作業の経緯と現在の状態は [引き継ぎ書](docs/HANDOVER.md) を参照。
@@ -34,7 +35,7 @@ altpntはeNMEA2000と同じく別プロジェクト（`-p altpnt`）で、API（
 |---|---|
 | リージョン | ap-tokyo-1（ホームリージョン。Always Freeはここだけ） |
 | ネットワーク | VCN `chuck-vcn` 10.0.0.0/16、公開サブネット 10.0.0.0/24、インターネットゲートウェイ |
-| セキュリティ・リスト | TCP 80／443、UDP 443は全体から。TCP 22は管理者のIPからだけ |
+| セキュリティ・リスト | TCP 80／443、UDP 443は全体から。TCP・UDP 10120（CHUCK位置ゲートウェイのNMEA受信）も全体から。TCP 22は管理者のIPからだけ |
 | VM | `VM.Standard.A1.Flex`、Ubuntu 24.04 aarch64、ブート50GB、予約済み公開IP、ユーザーデータ `cloud-init.yaml` |
 
 無料枠はA1合計4 OCPU・24GB（2026年6月以降、無料アカウントは2 OCPU・12GB）、ブロック・ストレージ合計200GB。アカウントは従量課金なので、超えた分は課金される。
@@ -53,6 +54,16 @@ bin/up.sh                         # 本体の compose と、別プロジェク�
 `bin/fetch-apps.sh` は最後に `bin/init-secrets.sh` を呼び、所有者の入力が要らない `env/enmea.env`（`APP_TOKEN`、DBのパスワード）と `env/bacchus.env`（所有者用の共用トークン）を、なければ乱数で作る。既存のファイルは変えない。値はVMで `grep APP_TOKEN env/enmea.env` のように読む。
 
 パスワードのハッシュは `docker run --rm caddy:2.8.4 caddy hash-password --plaintext '<パスワード>'` で作り、単引用符付きで書く。平文のパスワード、`CHUCK_ADMIN_SECRET`、`GITHUB_SPONSORS_WEBHOOK_SECRET`、`MASTER_KEY`、`LOCAL_SETUP_TOKEN` はVMに置く `.env` 類と管理者の手元にだけ保管し、このリポジトリには入れない。
+
+## CHUCK位置ゲートウェイのNMEA受信
+
+船舶・航空機・車両の機器は、`<公開IP>:10120` へTCPまたはUDPでNMEA 0183を送ります。最初の1行（UDPは各データグラムの1行目）に局の受信キーを送ります。受信キーはゲートウェイの管理画面で発行します。
+
+```sh
+ssh -i ~/.ssh/chuck_oci -L 18083:127.0.0.1:18083 ubuntu@<公開IP>   # http://localhost:18083/ を開く
+```
+
+管理画面のログインには `.env` の `HF_GATEWAY_UI_PASSWORD`（16文字以上）が要ります。本体の移動局表示には `HF_POSITION_GATEWAY_TOKEN`、HTTPでの送信には `HF_POSITION_INGEST_TOKEN`（どちらも32文字以上で別の値）を設定します。機能確認はCHUCKの `scripts/gateway_simulator.py check --url http://localhost:18083 --nmea-host <公開IP> --nmea-port 10120` で行えます（CHUCKの `docs/GATEWAY_SIMULATOR.md`）。
 
 ## 確認
 
