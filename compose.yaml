@@ -7,6 +7,7 @@ include:
   - path:
       - apps/CHUCK/compose.yaml
       - apps/CHUCK/compose.public.yaml
+      - overrides/chuck.yaml
     env_file: .env
   - path:
       - apps/ai-requirements-navigator/deploy/docker/compose.yml

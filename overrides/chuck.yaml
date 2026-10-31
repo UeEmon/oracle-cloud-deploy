@@ -1,0 +1,13 @@
+# CHUCK position gateway: receive NMEA 0183 over TCP/UDP from devices on the internet.
+# The host port is 10120 because eNMEA2000 already holds 10110 on this VM (overrides/enmea.yaml).
+# Every sender must send its station's stream key; an IP address alone is not accepted
+# (bin/check-config.sh refuses to start otherwise). The web screen and APIs stay on 127.0.0.1.
+services:
+  position-gateway:
+    ports: !override
+      - "127.0.0.1:18083:8001"
+      - "10120:10110/tcp"
+      - "10120:10110/udp"
+    environment:
+      HF_GATEWAY_NMEA_STREAM: "1"
+      HF_GATEWAY_NMEA_REQUIRE_KEY: "1"
