@@ -13,3 +13,26 @@ services:
       HF_GATEWAY_NMEA_STREAM: "1"
       HF_GATEWAY_NMEA_REQUIRE_KEY: "1"
       HF_GATEWAY_UI_SECURE_COOKIE: "1"
+
+  # Simulator control panel for testing the gateway (CHUCK scripts/gateway_simulator.py serve).
+  # It has no login of its own: Caddy serves it at sim.<CHUCK_DOMAIN> behind the CHUCK admin password.
+  # It sends to the gateway inside the compose network, so it does not test the internet path.
+  gateway-simulator:
+    image: python:3.12-slim-bookworm@sha256:34386ef0cb081344d7ec1c103ba398e6e9f64e9ab3a1509accc92a4e24a07258
+    command: ["python", "/chuck/scripts/gateway_simulator.py", "serve",
+              "--url", "http://position-gateway:8001", "--nmea-host", "position-gateway", "--nmea-port", "10110",
+              "--bind", "0.0.0.0", "--port", "8090", "--allow-host", "sim.${CHUCK_DOMAIN}", "--interval", "5"]
+    environment:
+      HF_POSITION_INGEST_TOKEN: "${HF_POSITION_INGEST_TOKEN:-}"
+      HF_POSITION_GATEWAY_TOKEN: "${HF_POSITION_GATEWAY_TOKEN:-}"
+      PYTHONDONTWRITEBYTECODE: "1"
+      PYTHONUNBUFFERED: "1"
+    volumes:
+      - ./:/chuck:ro
+    user: "10001:10001"
+    read_only: true
+    depends_on:
+      - position-gateway
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
