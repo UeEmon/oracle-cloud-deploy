@@ -43,7 +43,7 @@ data.{$CHUCK_DOMAIN} {
 		Referrer-Policy same-origin
 		-Server
 	}
-	@admin path / /public-data.js /style.css /i18n.js /i18n-messages.js /chuck-icon.png /favicon.png /ui/*
+	@admin path / /public-data.js /briefing.js /briefing-messages.js /style.css /i18n.js /i18n-messages.js /chuck-icon.png /favicon.png /ui/*
 	handle @admin {
 		reverse_proxy public-data:8002
 	}
