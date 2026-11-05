@@ -13,13 +13,8 @@ include:
       - apps/ai-requirements-navigator/deploy/docker/compose.yml
       - overrides/arn.yaml
     env_file: env/arn.env
-  # HACS has no login of its own; Caddy asks for the CHUCK admin password.
-  - path:
-      - apps/HACS/compose.yaml
-      - overrides/hacs.yaml
   - path: apps/BACCHUS-SYSTEM/compose.yaml
     env_file: env/bacchus.env
-# eNMEA2000 is started separately by bin/up.sh (see overrides/enmea.yaml).
 
 services:
   https-proxy:
@@ -34,7 +29,6 @@ services:
       CHUCK_PASSWORD_HASH: "${CHUCK_PASSWORD_HASH:?set CHUCK_PASSWORD_HASH in .env}"
       CHUCK_ADMIN_SECRET: "${CHUCK_ADMIN_SECRET:?set CHUCK_ADMIN_SECRET in .env}"
       ARN_DOMAIN: "${ARN_DOMAIN:?set ARN_DOMAIN in .env}"
-      # Not "app": eNMEA2000's app is also on the edge network (see overrides/arn.yaml).
       ARN_UPSTREAM: arn-app:8787
     volumes:
       # The directory, not the file: git pull replaces the Caddyfile with a new inode, which a
@@ -42,22 +36,14 @@ services:
       - ./caddy:/etc/caddy:ro
       - caddy-data:/data
       - caddy-config:/config
-    networks: [default, edge]
     depends_on:
       - hf-propagation
       - position-gateway
       - app
-      - hacs
-      - receiver
       - bacchus
     restart: unless-stopped
     security_opt:
       - no-new-privileges:true
-
-networks:
-  # Shared with the eNMEA2000 project so Caddy can reach its web screen.
-  edge:
-    name: edge
 
 volumes:
   caddy-data:
