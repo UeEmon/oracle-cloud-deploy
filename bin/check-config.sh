@@ -23,10 +23,4 @@ web=$(printf '%s' "$config" | python3 -c "import json,sys;print(' '.join(str(p.g
 # The gateway simulator has no login: only Caddy (with the admin password) may reach it.
 simports=$(printf '%s' "$config" | python3 -c "import json,sys;print(len(json.load(sys.stdin)['services'].get('gateway-simulator',{}).get('ports') or []))")
 [ "$simports" = 0 ] || { echo "gateway-simulator must not publish ports; it is reached only through Caddy" >&2; exit 1; }
-# altpnt's API has no login: it must stay on 127.0.0.1 and be reached only through Caddy.
-if [ -f apps/altpnt/docker-compose.yml ]; then
-	bind=$(docker compose -p altpnt --env-file env/altpnt.env -f apps/altpnt/docker-compose.yml -f overrides/altpnt.yaml config --format json \
-		| python3 -c "import json,sys;print(' '.join(str(p.get('host_ip')) for p in json.load(sys.stdin)['services']['cloud'].get('ports',[])))")
-	[ "$bind" = "127.0.0.1" ] || { echo "altpnt cloud ports bind to '$bind', expected '127.0.0.1'" >&2; exit 1; }
-fi
 echo "config OK"

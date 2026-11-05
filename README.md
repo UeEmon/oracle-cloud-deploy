@@ -10,11 +10,7 @@ Oracle Cloud（東京リージョン、A1は無料枠内）のVM 1台で、複�
 | CHUCK 位置ゲートウェイの管理画面 | 同上 | `https://gateway.<IP>.sslip.io` | `HF_GATEWAY_UI_PASSWORD`（ゲートウェイ自身のログイン）。位置のAPIは公開しない。機器はTCP・UDP 10120へ送る |
 | CHUCK 位置ゲートウェイの試験シミュレーター（管制画面） | 同上 | `https://sim.<IP>.sslip.io` | Caddyのパスワード（CHUCK管理サイトと同じ）。サーバー内からゲートウェイへ送る |
 | 要件ナビ | UeEmon/ai-requirements-navigator | `https://arn.<IP>.sslip.io` | 要件ナビ自身のログイン（`AUTH_MODE=local`） |
-| HACS 送信 | UeEmon/HACS | `https://hacs.<IP>.sslip.io` | Caddyのパスワード（CHUCK管理サイトと同じ） |
-| HACS 受信 | 同上 | `https://hacs-rx.<IP>.sslip.io` | 同上 |
-| eNMEA2000（NMEA Observatory本体） | UeEmon/eNMEA2000 | `https://nmea.<IP>.sslip.io` | `env/enmea.env` の `APP_TOKEN` |
 | BACCHUS-SYSTEM | UeEmon/BACCHUS-SYSTEM | `https://bacchus.<IP>.sslip.io` | 個人用はなし（ブラウザ内に保存）。共用は `env/bacchus.env` の `BACCHUS_USERS` のトークン |
-| altpnt（代替PNTシミュレータAPI） | UeEmon/altpnt | `https://altpnt.<IP>.sslip.io/docs` | Caddyのパスワード（CHUCK管理サイトと同じ） |
 
 `<IP>` は予約済み公開IPのドットをハイフンにしたもの。独自ドメインがあれば置き換える。
 
@@ -24,12 +20,10 @@ CHUCKは公開版（`compose.public.yaml` で `public_server.py` を起動）を
 
 - 入口はCaddy 1つ。80／443だけを公開し、Let's Encryptの証明書を自動で取る。
 - 各システムのWeb・DB・ゲートウェイは、VM内の127.0.0.1にだけ公開する。管理画面は `ssh -L` で開く。
-- 例外はCHUCK位置ゲートウェイのNMEA 0183受信（TCP・UDP 10120、`overrides/chuck.yaml`）。機器がインターネットから直接送るため全体に開け、局ごとの受信キーを必須にする（`bin/check-config.sh` が確認）。eNMEA2000が10110を使っているので10120にしている。ゲートウェイの管理画面とHTTPのAPIは127.0.0.1のまま。
+- 例外はCHUCK位置ゲートウェイのNMEA 0183受信（TCP・UDP 10120、`overrides/chuck.yaml`）。機器がインターネットから直接送るため全体に開け、局ごとの受信キーを必須にする（`bin/check-config.sh` が確認）。ゲートウェイの管理画面とHTTPのAPIは127.0.0.1のまま。
 - `compose.yaml` が各アプリのcompose を `include` で読み込む。アプリ側の設定は変更しない。
 
 作業の経緯と現在の状態は [引き継ぎ書](docs/HANDOVER.md) を参照。
-
-altpntはeNMEA2000と同じく別プロジェクト（`-p altpnt`）で、API（`cloud`）だけを起動する。LLM解析（LiteLLM）とエッジのシナリオ実行は起動しない。使うときは `env/altpnt.env` に `ANTHROPIC_API_KEY` を書き、`docker compose -p altpnt --env-file env/altpnt.env -f apps/altpnt/docker-compose.yml -f overrides/altpnt.yaml up -d litellm`。altpntのビルドに失敗しても、他のシステムの更新は止まらない。保存するデータがないのでバックアップの対象外。
 
 ## Oracle Cloudの資源
 
@@ -50,10 +44,10 @@ bin/fetch-apps.sh
 cp env.example .env               # ドメイン、CHUCK管理サイトのパスワードのハッシュ、CHUCK_ADMIN_SECRET、寄付の設定
 cp env/arn.env.example env/arn.env  # MASTER_KEY、LOCAL_SETUP_TOKEN、PUBLIC_URL
 bin/check-config.sh               # 要件ナビが開発用ログインのまま、CHUCKが本家のまま公開されないことを確認
-bin/up.sh                         # 本体の compose と、別プロジェクトの eNMEA2000 を起動
+bin/up.sh                         # 全システムを起動
 ```
 
-`bin/fetch-apps.sh` は最後に `bin/init-secrets.sh` を呼び、所有者の入力が要らない `env/enmea.env`（`APP_TOKEN`、DBのパスワード）と `env/bacchus.env`（所有者用の共用トークン）を、なければ乱数で作る。既存のファイルは変えない。値はVMで `grep APP_TOKEN env/enmea.env` のように読む。
+`bin/fetch-apps.sh` は最後に `bin/init-secrets.sh` を呼び、所有者の入力が要らない `env/bacchus.env`（所有者用の共用トークン）を、なければ乱数で作る。既存のファイルは変えない。値はVMで `grep BACCHUS_USERS env/bacchus.env` のように読む。
 
 パスワードのハッシュは `docker run --rm caddy:2.8.4 caddy hash-password --plaintext '<パスワード>'` で作り、単引用符付きで書く。平文のパスワード、`CHUCK_ADMIN_SECRET`、`GITHUB_SPONSORS_WEBHOOK_SECRET`、`MASTER_KEY`、`LOCAL_SETUP_TOKEN` はVMに置く `.env` 類と管理者の手元にだけ保管し、このリポジトリには入れない。
 
@@ -75,7 +69,7 @@ bin/up.sh                         # 本体の compose と、別プロジェク�
 
 ```sh
 bin/fetch-apps.sh && bin/check-config.sh && bin/up.sh
-docker compose -p enmea down; docker compose down   # -v はデータと証明書を消すので使わない
+docker compose down   # -v はデータと証明書を消すので使わない
 ```
 
 ## 自動更新
@@ -109,10 +103,10 @@ journalctl -u chuck-cost.service -n 5    # 直近の結果
 
 | ファイル | 中身 |
 |---|---|
-| `arn.pgdump`、`enmea.pgdump` | 要件ナビとeNMEA2000のPostgreSQL（`pg_dump --format=custom`） |
+| `arn.pgdump` | 要件ナビのPostgreSQL（`pg_dump --format=custom`） |
 | `hf-data.tar.gz`、`gateway-data.tar.gz` | CHUCKの計算結果・寄付台帳・位置情報（SQLiteはバックアップAPIで一貫した写しを取る） |
 | `artifacts.tar.gz` | 要件ナビの成果物ファイル |
-| `hacs_data.tar.gz`、`bacchus-data.tar.gz`、`enmea-raw-data.tar.gz` | HACSのプリセット、BACCHUSの在庫、eNMEA2000の受信ログ |
+| `bacchus-data.tar.gz` | BACCHUSの在庫 |
 
 秘密の値（`.env`、`env/*.env`）とCaddyの証明書は含めない。秘密の値の控えは所有者のMacの `~/.chuck-deploy` にある。
 
@@ -134,7 +128,7 @@ journalctl -u chuck-backup.service -n 5  # 直近の結果
 ## システムを追加するとき
 
 1. `bin/fetch-apps.sh` に取得先を追加する
-2. `compose.yaml` の `include` に、そのシステムのcomposeを追加する。ポートは127.0.0.1に限る。ポートが他と重なるときは `overrides/` に `!override` で書き換えるファイルを置く。サービス名（`app`、`db` など）が他と重なるときは、eNMEA2000のように別プロジェクトにして `bin/up.sh` で起動し、`edge` ネットワークでCaddyとつなぐ
+2. `compose.yaml` の `include` に、そのシステムのcomposeを追加する。ポートは127.0.0.1に限る。ポートが他と重なるときは `overrides/` に `!override` で書き換えるファイルを置く。サービス名（`app`、`db` など）が他と重なるときは、別プロジェクトにして `bin/up.sh` で起動し、共有ネットワークでCaddyとつなぐ
 3. `caddy/Caddyfile` にサイトを追加する。ログインがないシステムには `basic_auth` を付ける
 4. メモリとディスクが無料枠に収まるか確認する
 5. データを持つなら `bin/backup.sh` に追加する
