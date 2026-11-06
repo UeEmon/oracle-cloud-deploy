@@ -19,6 +19,14 @@ with tempfile.TemporaryDirectory() as tmp, tarfile.open(fileobj=sys.stdout.buffe
             copy = Path(tmp) / 'copy'
             with sqlite3.connect(path, timeout=30) as source, sqlite3.connect(copy) as target:
                 source.backup(target)
+                # Public query points are transient cache, not personal settings or durable config.
+                # Keep them out of long-lived backups as well as the running TTL store.
+                tables={r[0] for r in target.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+                if path.name == 'ocean.sqlite3' and 'points' in tables:
+                    for table in ('snapshots','schedule'):
+                        if table in tables:
+                            target.execute(f"DELETE FROM {table} WHERE area GLOB 'point_*'")
+                    target.execute('DELETE FROM points')
             tar.add(copy, arcname=name)
             copy.unlink()
         else:

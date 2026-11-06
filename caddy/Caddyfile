@@ -108,11 +108,8 @@ bacchus.{$CHUCK_DOMAIN} {
 	reverse_proxy bacchus:8000
 }
 
-# 海日和: shared collector API and static assets; shares the existing admin password per deployment policy.
+# 海日和 is public; only the collector control plane requires authentication.
 weather.{$CHUCK_DOMAIN} {
- basic_auth {
-  {$CHUCK_USER} {$CHUCK_PASSWORD_HASH}
- }
  encode gzip
  header {
   Strict-Transport-Security "max-age=31536000"
@@ -121,10 +118,34 @@ weather.{$CHUCK_DOMAIN} {
   -Server
  }
  root * /srv/openweather
- handle /api/* {
+ @admin path /collector /collector/ /collector-admin.html /collector-admin.js /api/v1/admin/*
+ handle @admin {
+  basic_auth {
+   {$CHUCK_USER} {$CHUCK_PASSWORD_HASH}
+  }
+  @adminApi path /api/v1/admin/*
+  handle @adminApi {
+   reverse_proxy ocean-data:8080
+  }
+  @adminPage path /collector /collector/
+  rewrite @adminPage /collector-admin.html
+  file_server
+ }
+ @publicGet {
+  method GET
+  path /api/v1/weather /api/v1/marine /api/v1/sst-analysis /api/v1/jma-marine-bulletins /api/v1/jma-typhoon-bulletins /api/v1/areas /api/v1/status /api/v1/sources
+ }
+ handle @publicGet {
   reverse_proxy ocean-data:8080
  }
- @assets path / /index.html /style.css /app.js /weather.mjs /areas.js /gis-terrain.mjs /vendor/cesium/*
+ @points {
+  method POST
+  path /api/v1/points
+ }
+ handle @points {
+  reverse_proxy ocean-data:8080
+ }
+ @assets path / /index.html /style.css /app.js /weather.mjs /areas.js /gis-terrain.mjs /browser-settings.mjs /vendor/cesium/*
  handle @assets {
   file_server
  }

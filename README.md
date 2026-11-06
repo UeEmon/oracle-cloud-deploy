@@ -135,4 +135,4 @@ journalctl -u chuck-backup.service -n 5  # 直近の結果
 
 ## 海日和（洋上気象・海象）
 
-`UeEmon/OpenWeather` のmainを既存の更新タイマーが取得し、`https://weather.<CHUCK_DOMAIN>` に配信します。既存のCHUCK管理サイトと同じユーザー名・パスワードでログインします。外部データは専用の `ocean-data` コンテナが収集・保存し、共通APIで各システムへ提供します。海日和はCaddy経由でこのAPIを利用します。[詳細と確認手順](docs/OPENWEATHER.md)を参照してください。
+`UeEmon/OpenWeather` のmainを既存の更新タイマーが取得し、`https://weather.<CHUCK_DOMAIN>` に配信します。海日和は認証なしで閲覧できます。収集設定 `/collector/` だけ既存のCHUCK管理サイトと同じ認証を使います。外部データは専用の `ocean-data` コンテナが収集・保存し、共通APIで各システムへ提供します。海日和はCaddy経由でこのAPIを利用します。[詳細と確認手順](docs/OPENWEATHER.md)を参照してください。

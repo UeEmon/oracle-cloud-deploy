@@ -16,7 +16,7 @@ systemctl status chuck-update.timer
 journalctl -u chuck-update.service -n 30
 ```
 
-更新後に `https://weather.<CHUCK_DOMAIN>/` で認証なし401、認証あり200と海象値の表示を確認します。認証後も `/.git/config` と `/README.md` は404になります。Caddy reloadの警告がある場合は旧設定が残っている可能性があるためログを確認してください。
+更新後に `https://weather.<CHUCK_DOMAIN>/` で認証なし200と海象値の表示、および `/collector/` の認証なし401・認証あり200を確認します。認証後も `/.git/config` と `/README.md` は404になります。Caddy reloadの警告がある場合は旧設定が残っている可能性があるためログを確認してください。
 
 ## 検証
 
@@ -39,8 +39,12 @@ docker compose logs --tail 30 ocean-data
 
 有効な収集元・再配布条件はOpenWeatherの `collector/sources.json` と `collector/LEGAL_REVIEW.md` を参照。気象30分、海象60分、気象庁の海上図／台風索引は毎時10分、NOAA OISST Finalは毎日03:00 JST。更新元の公開時刻が未確認の場合、こちらの取得時刻と同一視しません。予定・失敗回数はSQLiteに保存します。
 
-CesiumJSによる2D/3D GISで矩形海域を保存できます。予報は中心点の代表値です。追加海域は同じサーバー利用者の共有設定で最大24件。日本の国土地理院DEM提供範囲で陸上地形を表示し、海底地形は未接続です。地図／標高タイルは対話表示時にブラウザが直接取得し、一括収集しません。Referrer-PolicyはOSMタイル方針に従いstrict-origin-when-cross-originです。
+CesiumJSによる2D/3D GISで矩形海域を保存できます。予報は中心点の代表値です。追加海域は各ブラウザのlocalStorageに最大24件保存。名前・範囲・表示設定はサーバーへ送らず、中心座標だけを最大32件・12時間の一時キャッシュで扱います。日本の国土地理院DEM提供範囲で陸上地形を表示し、海底地形は未接続です。地図／標高タイルは対話表示時にブラウザが直接取得し、一括収集しません。Referrer-PolicyはOSMタイル方針に従いstrict-origin-when-cross-originです。
 
-新API: `/api/v1/sources`, `/api/v1/sst-analysis?area=...`, `/api/v1/jma-marine-bulletins`, `/api/v1/jma-typhoon-bulletins`。海域のGET/POST `/api/v1/areas` とDELETE `/api/v1/areas/{id}` は既存のBasic認証の後で利用します。データ源に未取得がある場合でもWeb・気象・海象APIは稼働を続けます。全ソースを確認する `/ready` は未取得時503です。
+新API: `/api/v1/sources`, `/api/v1/sst-analysis?area=...`, `/api/v1/jma-marine-bulletins`, `/api/v1/jma-typhoon-bulletins`。公開のGET `/api/v1/areas` は既定海域だけを返します。個人設定はブラウザ内です。公開のPOST `/api/v1/points` は取得用中心座標だけを受け付けます。`/collector/` と `/api/v1/admin/*` は既存のBasic認証が必要です。データ源に未取得がある場合でもWeb・気象・海象APIは稼働を続けます。全ソースを確認する `/ready` は未取得時503です。
 
 時間窓は `window=history`（過去12時間）、`window=24`、`window=36` をweather/marine APIに指定します。hourlyの毎時モデル値を抽出し、現在値と日別予報は元の構造を保持します。過去分を観測実況とは表示しません。Web上の時間選択にも反映します。
+
+公開ページの設定はブラウザ間で同期しません。管理者用の収集周期・時刻・有効化設定はサーバーに保存し、認証付き設定画面から変更できます。未確認ソースの有効化は拒否します。
+
+一時地点キャッシュはバックアップ作成時のSQLiteコピーからも除外し、バックアップにより12時間の一時保存が延長されることを防ぎます。元の稼働DBは変更しません。
