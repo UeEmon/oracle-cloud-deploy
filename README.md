@@ -132,3 +132,7 @@ journalctl -u chuck-backup.service -n 5  # 直近の結果
 3. `caddy/Caddyfile` にサイトを追加する。ログインがないシステムには `basic_auth` を付ける
 4. メモリとディスクが無料枠に収まるか確認する
 5. データを持つなら `bin/backup.sh` に追加する
+
+## 海日和（洋上気象・海象）
+
+`UeEmon/OpenWeather` のmainを既存の更新タイマーが取得し、`https://weather.<CHUCK_DOMAIN>` に配信します。既存のCHUCK管理サイトと同じユーザー名・パスワードでログインします。追加のアプリコンテナは不要です。[詳細と確認手順](docs/OPENWEATHER.md)を参照してください。

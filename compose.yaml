@@ -31,6 +31,7 @@ services:
       ARN_DOMAIN: "${ARN_DOMAIN:?set ARN_DOMAIN in .env}"
       ARN_UPSTREAM: arn-app:8787
     volumes:
+      - ./apps/OpenWeather:/srv/openweather:ro
       # The directory, not the file: git pull replaces the Caddyfile with a new inode, which a
       # single-file bind mount never sees, so the reload in bin/up.sh would keep the old config.
       - ./caddy:/etc/caddy:ro

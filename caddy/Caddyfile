@@ -107,3 +107,25 @@ bacchus.{$CHUCK_DOMAIN} {
 	}
 	reverse_proxy bacchus:8000
 }
+
+# 海日和: static assets only; shares the existing admin password per deployment policy.
+weather.{$CHUCK_DOMAIN} {
+ basic_auth {
+  {$CHUCK_USER} {$CHUCK_PASSWORD_HASH}
+ }
+ encode gzip
+ header {
+  Strict-Transport-Security "max-age=31536000"
+  X-Content-Type-Options nosniff
+  Referrer-Policy same-origin
+  -Server
+ }
+ root * /srv/openweather
+ @assets path / /index.html /style.css /app.js /weather.mjs
+ handle @assets {
+  file_server
+ }
+ handle {
+  respond 404
+ }
+}
