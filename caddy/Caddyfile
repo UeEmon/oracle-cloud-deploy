@@ -108,7 +108,7 @@ bacchus.{$CHUCK_DOMAIN} {
 	reverse_proxy bacchus:8000
 }
 
-# 海日和: static assets only; shares the existing admin password per deployment policy.
+# 海日和: shared collector API and static assets; shares the existing admin password per deployment policy.
 weather.{$CHUCK_DOMAIN} {
  basic_auth {
   {$CHUCK_USER} {$CHUCK_PASSWORD_HASH}
@@ -121,6 +121,9 @@ weather.{$CHUCK_DOMAIN} {
   -Server
  }
  root * /srv/openweather
+ handle /api/* {
+  reverse_proxy ocean-data:8080
+ }
  @assets path / /index.html /style.css /app.js /weather.mjs
  handle @assets {
   file_server

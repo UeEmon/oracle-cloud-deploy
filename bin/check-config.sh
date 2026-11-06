@@ -3,7 +3,7 @@
 set -eu
 cd "$(dirname "$0")/.."
 # Refuse an empty or unpublished OpenWeather checkout instead of serving a broken site.
-for asset in index.html style.css app.js weather.mjs; do
+for asset in index.html style.css app.js weather.mjs collector/Dockerfile collector/server.py collector/areas.json; do
  [ -s "apps/OpenWeather/$asset" ] || { echo "Missing apps/OpenWeather/$asset; publish the OpenWeather source and run bin/fetch-apps.sh" >&2; exit 1; }
 done
 config=$(docker compose config --format json)
@@ -27,4 +27,7 @@ web=$(printf '%s' "$config" | python3 -c "import json,sys;print(' '.join(str(p.g
 # The gateway simulator has no login: only Caddy (with the admin password) may reach it.
 simports=$(printf '%s' "$config" | python3 -c "import json,sys;print(len(json.load(sys.stdin)['services'].get('gateway-simulator',{}).get('ports') or []))")
 [ "$simports" = 0 ] || { echo "gateway-simulator must not publish ports; it is reached only through Caddy" >&2; exit 1; }
+# Shared data API must stay on the internal Compose network.
+oceanports=$(printf '%s' "$config" | python3 -c "import json,sys;print(len(json.load(sys.stdin)['services']['ocean-data'].get('ports') or []))")
+[ "$oceanports" = 0 ] || { echo "ocean-data must not publish host ports" >&2; exit 1; }
 echo "config OK"
