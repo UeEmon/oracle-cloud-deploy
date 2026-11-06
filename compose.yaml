@@ -23,7 +23,6 @@ services:
       - "8080"
     environment:
       DATA_PATH: /data/ocean.sqlite3
-      COLLECT_INTERVAL_SECONDS: "1800"
     volumes:
       - ocean-data:/data
     restart: unless-stopped

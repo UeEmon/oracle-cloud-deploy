@@ -117,14 +117,14 @@ weather.{$CHUCK_DOMAIN} {
  header {
   Strict-Transport-Security "max-age=31536000"
   X-Content-Type-Options nosniff
-  Referrer-Policy same-origin
+  Referrer-Policy strict-origin-when-cross-origin
   -Server
  }
  root * /srv/openweather
  handle /api/* {
   reverse_proxy ocean-data:8080
  }
- @assets path / /index.html /style.css /app.js /weather.mjs
+ @assets path / /index.html /style.css /app.js /weather.mjs /areas.js /gis-terrain.mjs /vendor/cesium/*
  handle @assets {
   file_server
  }

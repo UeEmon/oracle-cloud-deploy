@@ -3,7 +3,7 @@
 set -eu
 cd "$(dirname "$0")/.."
 # Refuse an empty or unpublished OpenWeather checkout instead of serving a broken site.
-for asset in index.html style.css app.js weather.mjs collector/Dockerfile collector/server.py collector/areas.json; do
+for asset in index.html style.css app.js weather.mjs gis-terrain.mjs areas.js vendor/cesium/Cesium.js collector/Dockerfile collector/server.py collector/additional_sources.py collector/sources.json collector/areas.json; do
  [ -s "apps/OpenWeather/$asset" ] || { echo "Missing apps/OpenWeather/$asset; publish the OpenWeather source and run bin/fetch-apps.sh" >&2; exit 1; }
 done
 config=$(docker compose config --format json)
