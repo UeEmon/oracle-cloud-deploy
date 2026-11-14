@@ -11,7 +11,7 @@ Oracle Cloud（東京リージョン、A1は無料枠内）のVM 1台で、複�
 | CHUCK 位置ゲートウェイの試験シミュレーター（管制画面） | 同上 | `https://sim.<IP>.sslip.io` | Caddyのパスワード（CHUCK管理サイトと同じ）。サーバー内からゲートウェイへ送る |
 | 要件ナビ | UeEmon/ai-requirements-navigator | `https://arn.<IP>.sslip.io` | 要件ナビ自身のログイン（`AUTH_MODE=local`） |
 | BACCHUS-SYSTEM | UeEmon/BACCHUS-SYSTEM | `https://bacchus.<IP>.sslip.io` | 個人用はなし（ブラウザ内に保存）。共用は `env/bacchus.env` の `BACCHUS_USERS` のトークン |
-| Nine-Gage（Nゲージのレイアウト設計） | UeEmon/Nine-Gage-Systems | `https://nine-gage.<IP>.sslip.io` | Caddyのパスワード（CHUCK管理サイトと同じ）。AIのキーは `env/ninegage.env` |
+| Nine-Gage（Nゲージのレイアウト設計） | UeEmon/Nine-Gage-Systems | `https://nine-gage.<IP>.sslip.io` | Nine-Gage自身のログイン（管理者・一般のロール）。最初の管理者は `env/ninegage.env` |
 
 `<IP>` は予約済み公開IPのドットをハイフンにしたもの。独自ドメインがあれば置き換える。
 
@@ -136,19 +136,27 @@ journalctl -u chuck-backup.service -n 5  # 直近の結果
 
 ## Nine-Gage（Nゲージのレイアウト設計）
 
-`https://nine-gage.<CHUCKのドメイン>` で開きます。CHUCK管理サイトと同じパスワードの後ろに置くので、サーバーに置いたAIのキーを他人に使われません。サーバーにデータは持たず、レイアウトは各ブラウザに保存されます（バックアップ不要）。
+`https://nine-gage.<CHUCKのドメイン>` で開きます。Nine-Gage自身のログインがあり、Caddyのパスワードはかけません。
 
-AIのキーはVMの `env/ninegage.env` に書き、`bin/up.sh` で反映します。どれも空でよく、空のときは画面の「AI設定」に入れたキー（そのブラウザにだけ保存）を使います。
+| ロール | できること |
+|---|---|
+| 管理者 | AIの設定（プロバイダ・モデル・APIキー・接続先URL）、ユーザーの追加・ロール変更・パスワード再設定・削除 |
+| 一般 | レイアウトの作成と、管理者が設定したAIでの提案。AIの設定は見えない |
+
+最初の管理者は `bin/init-secrets.sh` が `env/ninegage.env` に `NINEGAGE_ADMIN_USER=admin` と乱数の `NINEGAGE_ADMIN_PASSWORD` を書きます（既存のファイルにも、なければ追記）。VMで `grep NINEGAGE_ADMIN env/ninegage.env` で読み、ログインして「パスワード変更」で変えてください。この値はユーザーが1人もいないときだけ使われます。以降のユーザーは「管理」画面で追加します。
+
+ユーザーと管理者が設定したAIのキーは、ボリューム `ninegage-data`（コンテナの `/data/store.json`、権限600）に保存します。APIキーが入るので、秘密の値と同じくバックアップには含めません。消えたときは最初の管理者が作り直され、ユーザーとAI設定はやり直しになります。
+
+`env/ninegage.env` のAIのキー（`ANTHROPIC_API_KEY` など）は、管理画面で空欄の項目の代わりに使われます。どれも空でかまいません。
 
 | 変数 | 内容 |
 |---|---|
-| `AI_DEFAULT_PROVIDER` | `anthropic`・`openai`・`gemini`・`local` |
-| `ANTHROPIC_API_KEY`、`ANTHROPIC_MODEL` | Claude |
-| `OPENAI_API_KEY`、`OPENAI_MODEL` | OpenAI |
-| `GEMINI_API_KEY`、`GEMINI_MODEL` | Gemini |
-| `LOCAL_LLM_BASE_URL`、`LOCAL_LLM_MODEL`、`LOCAL_LLM_API_KEY` | OpenAI互換のローカルLLM。URLはVM（コンテナ）から届くアドレス。コンテナの `localhost` はコンテナ自身 |
+| `NINEGAGE_ADMIN_USER`、`NINEGAGE_ADMIN_PASSWORD` | 最初の管理者（10文字以上。`bin/check-config.sh` が確認） |
+| `AI_DEFAULT_PROVIDER` | 管理者が選ぶまで使うプロバイダ（`anthropic`・`openai`・`gemini`・`local`） |
+| `ANTHROPIC_API_KEY`、`OPENAI_API_KEY`、`GEMINI_API_KEY` ほか | 管理画面で空欄のときに使うキーとモデル |
+| `LOCAL_LLM_BASE_URL` | OpenAI互換のローカルLLM。URLはVM（コンテナ）から届くアドレス。コンテナの `localhost` はコンテナ自身 |
 
-画面から接続先URLを変える機能（`AI_ALLOW_CUSTOM_BASE_URL`）は、サーバーから任意のURLへ通信させないため `compose.yaml` で `false` に固定し、`bin/check-config.sh` が確認します。アプリはmainを取得するので、アプリ側の機能がmainに入るまで `bin/check-config.sh` は「Dockerfileがない」と止めます。
+`bin/check-config.sh` は、ログイン機能のないNine-Gage（パスワードなしで公開されてしまう）と、ホストのポートの公開を止めます。
 
 ## 海日和（洋上気象・海象）
 

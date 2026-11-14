@@ -33,7 +33,11 @@ oceanports=$(printf '%s' "$config" | python3 -c "import json,sys;print(len(json.
 # Nine-Gage: refuse a checkout without the app (main before the app was merged) instead of failing the build of every system.
 [ -s apps/Nine-Gage-Systems/Dockerfile ] || { echo "Missing apps/Nine-Gage-Systems/Dockerfile; merge the app to main and run bin/fetch-apps.sh" >&2; exit 1; }
 check nine-gage NODE_ENV production
-check nine-gage AI_ALLOW_CUSTOM_BASE_URL false
+check nine-gage NINEGAGE_DATA_DIR /data
+# Caddy no longer asks for a password, so the app must have its own login and a first admin.
+[ -s apps/Nine-Gage-Systems/src/lib/server/auth.ts ] || { echo "apps/Nine-Gage-Systems has no login; merge the app's login change before serving it without a password" >&2; exit 1; }
+ngadmin=$(printf '%s' "$config" | python3 -c "import json,sys;e=json.load(sys.stdin)['services']['nine-gage']['environment'];print(1 if e.get('NINEGAGE_ADMIN_USER') and len(e.get('NINEGAGE_ADMIN_PASSWORD',''))>=10 else 0)")
+[ "$ngadmin" = 1 ] || { echo "env/ninegage.env needs NINEGAGE_ADMIN_USER and a NINEGAGE_ADMIN_PASSWORD of 10 or more characters (bin/init-secrets.sh adds them)" >&2; exit 1; }
 ngports=$(printf '%s' "$config" | python3 -c "import json,sys;print(len(json.load(sys.stdin)['services']['nine-gage'].get('ports') or []))")
 [ "$ngports" = 0 ] || { echo "nine-gage must not publish host ports; it is reached only through Caddy" >&2; exit 1; }
 echo "config OK"
