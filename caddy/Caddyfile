@@ -108,12 +108,9 @@ bacchus.{$CHUCK_DOMAIN} {
 	reverse_proxy bacchus:8000
 }
 
-# Nine-Gage (N gauge layout planner): behind the CHUCK admin password, so the AI keys in
-# env/ninegage.env are not spent by strangers. Layouts stay in each browser.
+# Nine-Gage (N gauge layout planner) has its own login: admins manage users and the AI keys,
+# general users design layouts. bin/check-config.sh refuses an app without the login.
 nine-gage.{$CHUCK_DOMAIN} {
-	basic_auth {
-		{$CHUCK_USER} {$CHUCK_PASSWORD_HASH}
-	}
 	encode gzip
 	header {
 		Strict-Transport-Security "max-age=31536000"

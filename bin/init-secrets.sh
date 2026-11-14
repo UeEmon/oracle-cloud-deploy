@@ -1,6 +1,6 @@
 #!/bin/sh
 # Create the settings of the apps that need nothing from the owner, with fresh random secrets.
-# Existing files are never changed. Read a token on the VM, e.g. grep BACCHUS_USERS env/bacchus.env
+# Existing values are never changed (Nine-Gage's first admin is only added when missing). Read a token on the VM, e.g. grep BACCHUS_USERS env/bacchus.env
 set -eu
 cd "$(dirname "$0")/.."
 umask 077
@@ -11,7 +11,7 @@ if [ ! -f env/bacchus.env ]; then
 	echo "created env/bacchus.env"
 fi
 if [ ! -f env/ninegage.env ]; then
-	# Nine-Gage's AI. All optional: an empty key means visitors type their own in the app's AI settings.
+	# Nine-Gage's fallback AI keys. All optional: the admin can set them in the app instead.
 	cat > env/ninegage.env <<'EOT'
 AI_DEFAULT_PROVIDER=anthropic
 ANTHROPIC_API_KEY=
@@ -26,4 +26,12 @@ LOCAL_LLM_MODEL=
 LOCAL_LLM_API_KEY=
 EOT
 	echo "created env/ninegage.env"
+fi
+# Nine-Gage's first admin, used only while the app has no users. Added to an existing file too.
+# Read it on the VM: grep NINEGAGE_ADMIN env/ninegage.env
+if ! grep -q '^NINEGAGE_ADMIN_PASSWORD=.' env/ninegage.env; then
+	[ -z "$(tail -c1 env/ninegage.env)" ] || echo >> env/ninegage.env
+	sed -i '/^NINEGAGE_ADMIN_\(USER\|PASSWORD\)=/d' env/ninegage.env
+	printf 'NINEGAGE_ADMIN_USER=admin\nNINEGAGE_ADMIN_PASSWORD=%s\n' "$(openssl rand -base64 18 | tr -d '/+=')" >> env/ninegage.env
+	echo "added the Nine-Gage first admin to env/ninegage.env"
 fi
