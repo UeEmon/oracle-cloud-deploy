@@ -17,6 +17,37 @@ include:
     env_file: env/bacchus.env
 
 services:
+  # Nine-Gage: N gauge layout planner (UeEmon/Nine-Gage-Systems). It keeps no data on the server;
+  # layouts stay in the browser. AI keys come from env/ninegage.env (bin/init-secrets.sh creates it).
+  nine-gage:
+    build: ./apps/Nine-Gage-Systems
+    expose:
+      - "3000"
+    env_file: env/ninegage.env
+    environment:
+      NODE_ENV: production
+      # Visitors must not make the server call arbitrary URLs (bin/check-config.sh refuses true).
+      AI_ALLOW_CUSTOM_BASE_URL: "false"
+      NEXT_TELEMETRY_DISABLED: "1"
+    user: node
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp:size=32m
+      - /app/.next/cache:size=64m,uid=1000,gid=1000
+    mem_limit: 512m
+    cpus: 0.5
+    pids_limit: 128
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      driver: json-file
+      options:
+        max-size: 5m
+        max-file: "2"
+
   ocean-data:
     build: ./apps/OpenWeather/collector
     expose:
@@ -55,8 +86,8 @@ services:
       CHUCK_ADMIN_SECRET: "${CHUCK_ADMIN_SECRET:?set CHUCK_ADMIN_SECRET in .env}"
       ARN_DOMAIN: "${ARN_DOMAIN:?set ARN_DOMAIN in .env}"
       ARN_UPSTREAM: arn-app:8787
-      NO_PROXY: ocean-data,hf-propagation,position-gateway,public-data,gateway-simulator,arn-app,bacchus,localhost,127.0.0.1
-      no_proxy: ocean-data,hf-propagation,position-gateway,public-data,gateway-simulator,arn-app,bacchus,localhost,127.0.0.1
+      NO_PROXY: ocean-data,hf-propagation,position-gateway,public-data,gateway-simulator,arn-app,bacchus,nine-gage,localhost,127.0.0.1
+      no_proxy: ocean-data,hf-propagation,position-gateway,public-data,gateway-simulator,arn-app,bacchus,nine-gage,localhost,127.0.0.1
     volumes:
       - ./apps/OpenWeather:/srv/openweather:ro
       # The directory, not the file: git pull replaces the Caddyfile with a new inode, which a
@@ -70,6 +101,7 @@ services:
       - app
       - bacchus
       - ocean-data
+      - nine-gage
     restart: unless-stopped
     security_opt:
       - no-new-privileges:true

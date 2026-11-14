@@ -11,6 +11,7 @@ Oracle Cloud（東京リージョン、A1は無料枠内）のVM 1台で、複�
 | CHUCK 位置ゲートウェイの試験シミュレーター（管制画面） | 同上 | `https://sim.<IP>.sslip.io` | Caddyのパスワード（CHUCK管理サイトと同じ）。サーバー内からゲートウェイへ送る |
 | 要件ナビ | UeEmon/ai-requirements-navigator | `https://arn.<IP>.sslip.io` | 要件ナビ自身のログイン（`AUTH_MODE=local`） |
 | BACCHUS-SYSTEM | UeEmon/BACCHUS-SYSTEM | `https://bacchus.<IP>.sslip.io` | 個人用はなし（ブラウザ内に保存）。共用は `env/bacchus.env` の `BACCHUS_USERS` のトークン |
+| Nine-Gage（Nゲージのレイアウト設計） | UeEmon/Nine-Gage-Systems | `https://nine-gage.<IP>.sslip.io` | Caddyのパスワード（CHUCK管理サイトと同じ）。AIのキーは `env/ninegage.env` |
 
 `<IP>` は予約済み公開IPのドットをハイフンにしたもの。独自ドメインがあれば置き換える。
 
@@ -47,7 +48,7 @@ bin/check-config.sh               # 要件ナビが開発用ログインのま�
 bin/up.sh                         # 全システムを起動
 ```
 
-`bin/fetch-apps.sh` は最後に `bin/init-secrets.sh` を呼び、所有者の入力が要らない `env/bacchus.env`（所有者用の共用トークン）を、なければ乱数で作る。既存のファイルは変えない。値はVMで `grep BACCHUS_USERS env/bacchus.env` のように読む。
+`bin/fetch-apps.sh` は最後に `bin/init-secrets.sh` を呼び、所有者の入力が要らない `env/bacchus.env`（所有者用の共用トークン）を、なければ乱数で作る。既存のファイルは変えない。値はVMで `grep BACCHUS_USERS env/bacchus.env` のように読む。同じく、Nine-GageのAI設定 `env/ninegage.env` を空の値で作る。
 
 パスワードのハッシュは `docker run --rm caddy:2.8.4 caddy hash-password --plaintext '<パスワード>'` で作り、単引用符付きで書く。平文のパスワード、`CHUCK_ADMIN_SECRET`、`GITHUB_SPONSORS_WEBHOOK_SECRET`、`MASTER_KEY`、`LOCAL_SETUP_TOKEN` はVMに置く `.env` 類と管理者の手元にだけ保管し、このリポジトリには入れない。
 
@@ -132,6 +133,22 @@ journalctl -u chuck-backup.service -n 5  # 直近の結果
 3. `caddy/Caddyfile` にサイトを追加する。ログインがないシステムには `basic_auth` を付ける
 4. メモリとディスクが無料枠に収まるか確認する
 5. データを持つなら `bin/backup.sh` に追加する
+
+## Nine-Gage（Nゲージのレイアウト設計）
+
+`https://nine-gage.<CHUCKのドメイン>` で開きます。CHUCK管理サイトと同じパスワードの後ろに置くので、サーバーに置いたAIのキーを他人に使われません。サーバーにデータは持たず、レイアウトは各ブラウザに保存されます（バックアップ不要）。
+
+AIのキーはVMの `env/ninegage.env` に書き、`bin/up.sh` で反映します。どれも空でよく、空のときは画面の「AI設定」に入れたキー（そのブラウザにだけ保存）を使います。
+
+| 変数 | 内容 |
+|---|---|
+| `AI_DEFAULT_PROVIDER` | `anthropic`・`openai`・`gemini`・`local` |
+| `ANTHROPIC_API_KEY`、`ANTHROPIC_MODEL` | Claude |
+| `OPENAI_API_KEY`、`OPENAI_MODEL` | OpenAI |
+| `GEMINI_API_KEY`、`GEMINI_MODEL` | Gemini |
+| `LOCAL_LLM_BASE_URL`、`LOCAL_LLM_MODEL`、`LOCAL_LLM_API_KEY` | OpenAI互換のローカルLLM。URLはVM（コンテナ）から届くアドレス。コンテナの `localhost` はコンテナ自身 |
+
+画面から接続先URLを変える機能（`AI_ALLOW_CUSTOM_BASE_URL`）は、サーバーから任意のURLへ通信させないため `compose.yaml` で `false` に固定し、`bin/check-config.sh` が確認します。アプリはmainを取得するので、アプリ側の機能がmainに入るまで `bin/check-config.sh` は「Dockerfileがない」と止めます。
 
 ## 海日和（洋上気象・海象）
 
