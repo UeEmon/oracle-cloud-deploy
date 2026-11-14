@@ -30,4 +30,10 @@ simports=$(printf '%s' "$config" | python3 -c "import json,sys;print(len(json.lo
 # Shared data API must stay on the internal Compose network.
 oceanports=$(printf '%s' "$config" | python3 -c "import json,sys;print(len(json.load(sys.stdin)['services']['ocean-data'].get('ports') or []))")
 [ "$oceanports" = 0 ] || { echo "ocean-data must not publish host ports" >&2; exit 1; }
+# Nine-Gage: refuse a checkout without the app (main before the app was merged) instead of failing the build of every system.
+[ -s apps/Nine-Gage-Systems/Dockerfile ] || { echo "Missing apps/Nine-Gage-Systems/Dockerfile; merge the app to main and run bin/fetch-apps.sh" >&2; exit 1; }
+check nine-gage NODE_ENV production
+check nine-gage AI_ALLOW_CUSTOM_BASE_URL false
+ngports=$(printf '%s' "$config" | python3 -c "import json,sys;print(len(json.load(sys.stdin)['services']['nine-gage'].get('ports') or []))")
+[ "$ngports" = 0 ] || { echo "nine-gage must not publish host ports; it is reached only through Caddy" >&2; exit 1; }
 echo "config OK"

@@ -108,6 +108,22 @@ bacchus.{$CHUCK_DOMAIN} {
 	reverse_proxy bacchus:8000
 }
 
+# Nine-Gage (N gauge layout planner): behind the CHUCK admin password, so the AI keys in
+# env/ninegage.env are not spent by strangers. Layouts stay in each browser.
+nine-gage.{$CHUCK_DOMAIN} {
+	basic_auth {
+		{$CHUCK_USER} {$CHUCK_PASSWORD_HASH}
+	}
+	encode gzip
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options nosniff
+		Referrer-Policy same-origin
+		-Server
+	}
+	reverse_proxy nine-gage:3000
+}
+
 # 海日和 is public; only the collector control plane requires authentication.
 weather.{$CHUCK_DOMAIN} {
  encode gzip
