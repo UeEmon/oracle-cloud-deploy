@@ -27,7 +27,7 @@ CHUCKは公開版（`compose.public.yaml` で `public_server.py` を起動）を
 
 作業の経緯と現在の状態は [引き継ぎ書](docs/HANDOVER.md) を参照。
 
-Nine-Gageは専用のVMへ移す（[ninegage/README.md](ninegage/README.md)）。移し終えるまでは、下の「Nine-Gage」の構成でこのVMでも動く。
+Nine-Gageは専用のVM ninegage-1 へ移した（[ninegage/README.md](ninegage/README.md)）。このVMの `nine-gage.<CHUCKのドメイン>` と `nine-gage-staging.<CHUCKのドメイン>` は、新しいVMの `https://138-3-216-172.sslip.io` と `https://staging.138-3-216-172.sslip.io` へ転送する（パスはそのまま）。下の「Nine-Gage」のサービスは、データを新しいVMへ移し終えるまで残す。
 
 ## Oracle Cloudの資源
 
