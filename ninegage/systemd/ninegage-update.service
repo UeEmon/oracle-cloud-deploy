@@ -1,0 +1,10 @@
+[Unit]
+Description=Deploy new Nine-Gage images and changes of this repo
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=ubuntu
+ExecStart=/home/ubuntu/oracle-cloud-deploy/ninegage/bin/auto-update.sh
+TimeoutStartSec=30min

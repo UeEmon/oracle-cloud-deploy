@@ -1,0 +1,10 @@
+[Unit]
+Description=Daily Nine-Gage backup (03:30 JST)
+
+[Timer]
+OnCalendar=*-*-* 18:30:00
+RandomizedDelaySec=15m
+Persistent=true
+
+[Install]
+WantedBy=timers.target

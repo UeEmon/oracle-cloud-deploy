@@ -1,0 +1,42 @@
+# Certificates come from Let's Encrypt automatically.
+# NINEGAGE_DOMAIN is the VM's <IP with dashes>.sslip.io until the owner has a domain; then only .env changes.
+
+# No framing, scripts and data only from itself (Next.js needs inline scripts and styles),
+# drawings and recordings as data:/blob:.
+(ninegage_headers) {
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options nosniff
+		Referrer-Policy same-origin
+		X-Frame-Options DENY
+		Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'; media-src 'self' blob:; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+		Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=(), usb=()"
+		Cross-Origin-Opener-Policy same-origin
+		-Server
+		-X-Powered-By
+	}
+}
+
+# Production: Nine-Gage's own login; anyone may open the editor and sign up.
+{$NINEGAGE_DOMAIN} {
+	encode gzip
+	import ninegage_headers
+	request_body {
+		max_size 2MB
+	}
+	reverse_proxy nine-gage:3000
+}
+
+# Staging (the latest main) behind its own password, kept out of search engines.
+staging.{$NINEGAGE_DOMAIN} {
+	basic_auth {
+		{$NINEGAGE_STAGING_USER} {$NINEGAGE_STAGING_PASSWORD_HASH}
+	}
+	encode gzip
+	import ninegage_headers
+	header X-Robots-Tag "noindex, nofollow"
+	request_body {
+		max_size 2MB
+	}
+	reverse_proxy nine-gage-staging:3000
+}
