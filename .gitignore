@@ -6,3 +6,7 @@ apps/
 
 __pycache__/
 *.pyc
+ninegage/.env
+ninegage/env/*.env
+ninegage/.deployed
+ninegage/.auto-update.lock

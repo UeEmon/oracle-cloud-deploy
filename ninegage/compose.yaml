@@ -1,0 +1,104 @@
+# Nine-Gage's own VM: one HTTPS entrance (Caddy) in front of production and staging, nothing else.
+#   cd ~/oracle-cloud-deploy/ninegage && bin/init-secrets.sh && bin/check-config.sh && bin/up.sh
+# The images come from the app's CI (ghcr.io): :stable = the latest release tag v*, :main = the latest merge.
+# Each app sits on its own network shared only with Caddy, so production and staging cannot reach each other.
+name: ninegage
+
+x-hardening: &hardening
+  user: node
+  restart: unless-stopped
+  read_only: true
+  tmpfs:
+    - /tmp:size=32m
+    - /app/.next/cache:size=64m,uid=1000,gid=1000
+  pids_limit: 128
+  cap_drop:
+    - ALL
+  security_opt:
+    - no-new-privileges:true
+  logging:
+    driver: json-file
+    options:
+      max-size: 5m
+      max-file: "3"
+
+services:
+  nine-gage:
+    <<: *hardening
+    image: ghcr.io/ueemon/nine-gage-systems:${NINEGAGE_TAG:-stable}
+    expose:
+      - "3000"
+    # First admin, NINEGAGE_SECRET_KEY, NINEGAGE_BACKUP_KEY, mail and fallback AI keys (bin/init-secrets.sh).
+    env_file: env/ninegage.env
+    environment:
+      NODE_ENV: production
+      NINEGAGE_DATA_DIR: /data
+      # Links in the sign-up confirmation mail. Fixed here so a forged Host header cannot change them.
+      NINEGAGE_PUBLIC_URL: "https://${NINEGAGE_DOMAIN:?set NINEGAGE_DOMAIN in .env}"
+      NEXT_TELEMETRY_DISABLED: "1"
+    volumes:
+      - ninegage-data:/data
+    networks:
+      - prod-edge
+    mem_limit: 1g
+    cpus: 0.75
+
+  nine-gage-staging:
+    <<: *hardening
+    image: ghcr.io/ueemon/nine-gage-systems:main
+    expose:
+      - "3000"
+    # Its own first admin and keys, no mail (sign-up closed), no AI keys.
+    env_file: env/ninegage-staging.env
+    environment:
+      NODE_ENV: production
+      NINEGAGE_DATA_DIR: /data
+      NINEGAGE_PUBLIC_URL: "https://staging.${NINEGAGE_DOMAIN:?set NINEGAGE_DOMAIN in .env}"
+      NEXT_TELEMETRY_DISABLED: "1"
+    volumes:
+      - ninegage-staging-data:/data
+    networks:
+      - staging-edge
+    mem_limit: 512m
+    cpus: 0.25
+
+  https-proxy:
+    image: caddy:2.8.4
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      NINEGAGE_DOMAIN: "${NINEGAGE_DOMAIN:?set NINEGAGE_DOMAIN in .env}"
+    # NINEGAGE_STAGING_USER and NINEGAGE_STAGING_PASSWORD_HASH (bin/init-secrets.sh).
+    env_file: env/staging-auth.env
+    volumes:
+      # The directory, not the file, so a git pull that replaces the Caddyfile is seen by caddy reload.
+      - ./caddy:/etc/caddy:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    networks:
+      - prod-edge
+      - staging-edge
+    depends_on:
+      - nine-gage
+      - nine-gage-staging
+    restart: unless-stopped
+    mem_limit: 256m
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      driver: json-file
+      options:
+        max-size: 5m
+        max-file: "3"
+
+networks:
+  prod-edge:
+  staging-edge:
+
+volumes:
+  ninegage-data:
+  ninegage-staging-data:
+  caddy-data:
+  caddy-config:

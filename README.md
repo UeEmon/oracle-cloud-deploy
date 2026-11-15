@@ -27,6 +27,8 @@ CHUCKは公開版（`compose.public.yaml` で `public_server.py` を起動）を
 
 作業の経緯と現在の状態は [引き継ぎ書](docs/HANDOVER.md) を参照。
 
+Nine-Gageは専用のVMへ移す（[ninegage/README.md](ninegage/README.md)）。移し終えるまでは、下の「Nine-Gage」の構成でこのVMでも動く。
+
 ## Oracle Cloudの資源
 
 | 資源 | 内容 |
