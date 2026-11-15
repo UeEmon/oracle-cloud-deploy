@@ -30,35 +30,9 @@ simports=$(printf '%s' "$config" | python3 -c "import json,sys;print(len(json.lo
 # Shared data API must stay on the internal Compose network.
 oceanports=$(printf '%s' "$config" | python3 -c "import json,sys;print(len(json.load(sys.stdin)['services']['ocean-data'].get('ports') or []))")
 [ "$oceanports" = 0 ] || { echo "ocean-data must not publish host ports" >&2; exit 1; }
-# Nine-Gage runs the image from its CI, never a local build.
+# Nine-Gage runs on its own VM now (ninegage/); this VM only forwards its old addresses.
 for svc in nine-gage nine-gage-staging; do
-	img=$(printf '%s' "$config" | python3 -c "import json,sys;s=json.load(sys.stdin)['services']['$svc'];print('' if 'build' in s else s.get('image',''))")
-	case "$img" in ghcr.io/ueemon/nine-gage-systems:?*) ;; *) echo "$svc must run ghcr.io/ueemon/nine-gage-systems:<tag> without build, got '$img'" >&2; exit 1 ;; esac
-done
-check nine-gage NODE_ENV production
-check nine-gage NINEGAGE_DATA_DIR /data
-check nine-gage-staging NODE_ENV production
-check nine-gage-staging NINEGAGE_DATA_DIR /data
-ngurl=$(printf '%s' "$config" | python3 -c "import json,sys;print(json.load(sys.stdin)['services']['nine-gage']['environment'].get('NINEGAGE_PUBLIC_URL',''))")
-case "$ngurl" in https://nine-gage.?*) ;; *) echo "nine-gage needs NINEGAGE_PUBLIC_URL=https://nine-gage.<CHUCK_DOMAIN> for its confirmation mail" >&2; exit 1 ;; esac
-# Each Nine-Gage sits only on its own network, shared with Caddy alone: not on the default network of the other apps.
-nets() { printf '%s' "$config" | python3 -c "import json,sys;print(' '.join(sorted((json.load(sys.stdin)['services']['$1'].get('networks') or {'default':None}).keys())))"; }
-[ "$(nets nine-gage)" = ninegage-edge ] || { echo "nine-gage must be on the ninegage-edge network only, got '$(nets nine-gage)'" >&2; exit 1; }
-[ "$(nets nine-gage-staging)" = ninegage-staging-edge ] || { echo "nine-gage-staging must be on the ninegage-staging-edge network only, got '$(nets nine-gage-staging)'" >&2; exit 1; }
-members=$(printf '%s' "$config" | python3 -c "import json,sys;s=json.load(sys.stdin)['services'];print(' '.join(sorted(n for n,v in s.items() if set((v.get('networks') or {'default':None}).keys()) & {'ninegage-edge','ninegage-staging-edge'})))")
-[ "$members" = "https-proxy nine-gage nine-gage-staging" ] || { echo "only Caddy may share the Nine-Gage networks, found: $members" >&2; exit 1; }
-# The staging site needs its password for Caddy (bin/init-secrets.sh creates it).
-# (docker compose config prints each $ as $$.)
-stghash=$(printf '%s' "$config" | python3 -c "import json,sys;h=json.load(sys.stdin)['services']['https-proxy']['environment'].get('NINEGAGE_STAGING_PASSWORD_HASH','');print(1 if h.replace('\$\$','\$').startswith('\$2') and len(h)>50 else 0)")
-case "$stghash" in 1) ;; *) echo "env/ninegage-staging-auth.env needs NINEGAGE_STAGING_PASSWORD_HASH (a bcrypt hash; bin/init-secrets.sh creates it)" >&2; exit 1 ;; esac
-ngadmin=$(printf '%s' "$config" | python3 -c "import json,sys;e=json.load(sys.stdin)['services']['nine-gage']['environment'];print(1 if e.get('NINEGAGE_ADMIN_USER') and len(e.get('NINEGAGE_ADMIN_PASSWORD',''))>=10 else 0)")
-[ "$ngadmin" = 1 ] || { echo "env/ninegage.env needs NINEGAGE_ADMIN_USER and a NINEGAGE_ADMIN_PASSWORD of 10 or more characters (bin/init-secrets.sh adds them)" >&2; exit 1; }
-ngkey=$(printf '%s' "$config" | python3 -c "import json,sys;e=json.load(sys.stdin)['services']['nine-gage']['environment'];print(1 if len(e.get('NINEGAGE_SECRET_KEY',''))>=32 else 0)")
-[ "$ngkey" = 1 ] || { echo "env/ninegage.env needs a NINEGAGE_SECRET_KEY of 32 or more characters (bin/init-secrets.sh adds it)" >&2; exit 1; }
-stgadmin=$(printf '%s' "$config" | python3 -c "import json,sys;e=json.load(sys.stdin)['services']['nine-gage-staging']['environment'];print(1 if e.get('NINEGAGE_ADMIN_USER') and len(e.get('NINEGAGE_ADMIN_PASSWORD',''))>=10 and len(e.get('NINEGAGE_SECRET_KEY',''))>=32 else 0)")
-[ "$stgadmin" = 1 ] || { echo "env/ninegage-staging.env needs NINEGAGE_ADMIN_USER, NINEGAGE_ADMIN_PASSWORD and NINEGAGE_SECRET_KEY (bin/init-secrets.sh creates it)" >&2; exit 1; }
-for svc in nine-gage nine-gage-staging; do
-	ngports=$(printf '%s' "$config" | python3 -c "import json,sys;print(len(json.load(sys.stdin)['services']['$svc'].get('ports') or []))")
-	[ "$ngports" = 0 ] || { echo "$svc must not publish host ports; it is reached only through Caddy" >&2; exit 1; }
+	gone=$(printf '%s' "$config" | python3 -c "import json,sys;print(1 if '$svc' in json.load(sys.stdin)['services'] else 0)")
+	[ "$gone" = 0 ] || { echo "$svc runs on ninegage-1 (ninegage/), not on this VM" >&2; exit 1; }
 done
 echo "config OK"

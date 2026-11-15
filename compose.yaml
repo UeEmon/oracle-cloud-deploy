@@ -17,82 +17,6 @@ include:
     env_file: env/bacchus.env
 
 services:
-  # Nine-Gage: N gauge layout planner (UeEmon/Nine-Gage-Systems) with its own login and roles.
-  # The image comes from the app's CI (ghcr.io); nothing is built on the VM.
-  #   :stable = the latest release tag v* (production), :main = the latest merge (staging).
-  # Users and the admin's AI settings live in the ninegage-data volume; layouts stay in each browser.
-  # env/ninegage.env holds the first admin, the secret key, mail and fallback AI keys (bin/init-secrets.sh creates it).
-  # It sits on its own network with Caddy only: it cannot reach CHUCK, 要件ナビ's database or the other apps.
-  nine-gage:
-    image: ghcr.io/ueemon/nine-gage-systems:${NINEGAGE_TAG:-stable}
-    expose:
-      - "3000"
-    env_file: env/ninegage.env
-    environment:
-      NODE_ENV: production
-      NINEGAGE_DATA_DIR: /data
-      # Links in the sign-up confirmation mail. Fixed here so a forged Host header cannot change them.
-      NINEGAGE_PUBLIC_URL: "https://nine-gage.${CHUCK_DOMAIN:?set CHUCK_DOMAIN in .env}"
-      NEXT_TELEMETRY_DISABLED: "1"
-    volumes:
-      - ninegage-data:/data
-    networks:
-      - ninegage-edge
-    user: node
-    restart: unless-stopped
-    read_only: true
-    tmpfs:
-      - /tmp:size=32m
-      - /app/.next/cache:size=64m,uid=1000,gid=1000
-    mem_limit: 512m
-    cpus: 0.5
-    pids_limit: 128
-    cap_drop:
-      - ALL
-    security_opt:
-      - no-new-privileges:true
-    logging:
-      driver: json-file
-      options:
-        max-size: 5m
-        max-file: "2"
-
-  # Nine-Gage staging: the latest main, for the owner and co-developers to try before a release.
-  # Its own data, secrets and network; Caddy asks for the staging password (env/ninegage-staging-auth.env).
-  # No mail settings, so sign-up is closed; add users from the admin screen.
-  nine-gage-staging:
-    image: ghcr.io/ueemon/nine-gage-systems:main
-    expose:
-      - "3000"
-    env_file: env/ninegage-staging.env
-    environment:
-      NODE_ENV: production
-      NINEGAGE_DATA_DIR: /data
-      NINEGAGE_PUBLIC_URL: "https://nine-gage-staging.${CHUCK_DOMAIN:?set CHUCK_DOMAIN in .env}"
-      NEXT_TELEMETRY_DISABLED: "1"
-    volumes:
-      - ninegage-staging-data:/data
-    networks:
-      - ninegage-staging-edge
-    user: node
-    restart: unless-stopped
-    read_only: true
-    tmpfs:
-      - /tmp:size=32m
-      - /app/.next/cache:size=64m,uid=1000,gid=1000
-    mem_limit: 384m
-    cpus: 0.25
-    pids_limit: 128
-    cap_drop:
-      - ALL
-    security_opt:
-      - no-new-privileges:true
-    logging:
-      driver: json-file
-      options:
-        max-size: 5m
-        max-file: "2"
-
   ocean-data:
     build: ./apps/OpenWeather/collector
     expose:
@@ -131,10 +55,8 @@ services:
       CHUCK_ADMIN_SECRET: "${CHUCK_ADMIN_SECRET:?set CHUCK_ADMIN_SECRET in .env}"
       ARN_DOMAIN: "${ARN_DOMAIN:?set ARN_DOMAIN in .env}"
       ARN_UPSTREAM: arn-app:8787
-      NO_PROXY: ocean-data,hf-propagation,position-gateway,public-data,gateway-simulator,arn-app,bacchus,nine-gage,nine-gage-staging,localhost,127.0.0.1
-      no_proxy: ocean-data,hf-propagation,position-gateway,public-data,gateway-simulator,arn-app,bacchus,nine-gage,nine-gage-staging,localhost,127.0.0.1
-    # NINEGAGE_STAGING_USER and NINEGAGE_STAGING_PASSWORD_HASH for the staging site (bin/init-secrets.sh creates it).
-    env_file: env/ninegage-staging-auth.env
+      NO_PROXY: ocean-data,hf-propagation,position-gateway,public-data,gateway-simulator,arn-app,bacchus,localhost,127.0.0.1
+      no_proxy: ocean-data,hf-propagation,position-gateway,public-data,gateway-simulator,arn-app,bacchus,localhost,127.0.0.1
     volumes:
       - ./apps/OpenWeather:/srv/openweather:ro
       # The directory, not the file: git pull replaces the Caddyfile with a new inode, which a
@@ -142,29 +64,18 @@ services:
       - ./caddy:/etc/caddy:ro
       - caddy-data:/data
       - caddy-config:/config
-    # default reaches the other apps; each Nine-Gage network reaches only that Nine-Gage.
-    networks:
-      - default
-      - ninegage-edge
-      - ninegage-staging-edge
     depends_on:
       - hf-propagation
       - position-gateway
       - app
       - bacchus
       - ocean-data
-      - nine-gage
-      - nine-gage-staging
     restart: unless-stopped
     security_opt:
       - no-new-privileges:true
 
-networks:
-  default:
-  ninegage-edge:
-  ninegage-staging-edge:
-
 volumes:
+  # Nine-Gage's data before it moved to ninegage-1 (2026-11-16). Nothing uses them now; kept for a while as a fallback.
   ninegage-data:
   ninegage-staging-data:
   ocean-data:
