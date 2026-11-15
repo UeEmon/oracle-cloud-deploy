@@ -35,3 +35,11 @@ if ! grep -q '^NINEGAGE_ADMIN_PASSWORD=.' env/ninegage.env; then
 	printf 'NINEGAGE_ADMIN_USER=admin\nNINEGAGE_ADMIN_PASSWORD=%s\n' "$(openssl rand -base64 18 | tr -d '/+=')" >> env/ninegage.env
 	echo "added the Nine-Gage first admin to env/ninegage.env"
 fi
+# Nine-Gage's key for encrypting the API keys that general users save for themselves.
+# Kept out of the data volume on purpose. Never change it: saved user keys could no longer be read.
+if ! grep -q '^NINEGAGE_SECRET_KEY=.' env/ninegage.env; then
+	[ -z "$(tail -c1 env/ninegage.env)" ] || echo >> env/ninegage.env
+	sed -i '/^NINEGAGE_SECRET_KEY=/d' env/ninegage.env
+	printf 'NINEGAGE_SECRET_KEY=%s\n' "$(openssl rand -hex 32)" >> env/ninegage.env
+	echo "added the Nine-Gage secret key to env/ninegage.env"
+fi

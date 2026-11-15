@@ -108,8 +108,8 @@ bacchus.{$CHUCK_DOMAIN} {
 	reverse_proxy bacchus:8000
 }
 
-# Nine-Gage (N gauge layout planner) has its own login: admins manage users and the AI keys,
-# general users design layouts. bin/check-config.sh refuses an app without the login.
+# Nine-Gage (N gauge layout planner) has its own login and roles: anyone may open the editor and sign up,
+# only admins and "AI" users spend the server's AI keys. bin/check-config.sh refuses an app without the login.
 nine-gage.{$CHUCK_DOMAIN} {
 	encode gzip
 	header {
