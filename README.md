@@ -11,8 +11,7 @@ Oracle Cloud（東京リージョン、A1は無料枠内）のVM 1台で、複�
 | CHUCK 位置ゲートウェイの試験シミュレーター（管制画面） | 同上 | `https://sim.<IP>.sslip.io` | Caddyのパスワード（CHUCK管理サイトと同じ）。サーバー内からゲートウェイへ送る |
 | 要件ナビ | UeEmon/ai-requirements-navigator | `https://arn.<IP>.sslip.io` | 要件ナビ自身のログイン（`AUTH_MODE=local`） |
 | BACCHUS-SYSTEM | UeEmon/BACCHUS-SYSTEM | `https://bacchus.<IP>.sslip.io` | 個人用はなし（ブラウザ内に保存）。共用は `env/bacchus.env` の `BACCHUS_USERS` のトークン |
-| Nine-Gage（Nゲージのレイアウト設計） | UeEmon/Nine-Gage-Systems | `https://nine-gage.<IP>.sslip.io` | Nine-Gage自身のログイン（管理者・プレミアムユーザー・一般のロール、ログインなしでも閲覧可）。最初の管理者は `env/ninegage.env` |
-| Nine-Gage ステージング | 同上（mainの最新） | `https://nine-gage-staging.<IP>.sslip.io` | Caddyのパスワード（`env/ninegage-staging-auth.env`、CHUCKとは別）と、ステージング自身のログイン（`env/ninegage-staging.env`） |
+| Nine-Gage（Nゲージのレイアウト設計）とそのステージング | UeEmon/Nine-Gage-Systems | 専用VM `ninegage-1` へ移した（[ninegage/README.md](ninegage/README.md)）。`https://nine-gage.<IP>.sslip.io` と `https://nine-gage-staging.<IP>.sslip.io` は新しいURLへ転送する | — |
 
 `<IP>` は予約済み公開IPのドットをハイフンにしたもの。独自ドメインがあれば置き換える。
 
@@ -27,7 +26,7 @@ CHUCKは公開版（`compose.public.yaml` で `public_server.py` を起動）を
 
 作業の経緯と現在の状態は [引き継ぎ書](docs/HANDOVER.md) を参照。
 
-Nine-Gageは専用のVMへ移す（[ninegage/README.md](ninegage/README.md)）。移し終えるまでは、下の「Nine-Gage」の構成でこのVMでも動く。
+Nine-Gageは2026-11-16に専用のVM `ninegage-1` へ移した（[ninegage/README.md](ninegage/README.md)）。このVMのCaddyは、古いURLを新しいURLへパスごと転送するだけ（`caddy/Caddyfile`）。移す前のデータはボリューム `ninegage-data` に残してあり、使っていない。
 
 ## Oracle Cloudの資源
 
@@ -51,7 +50,7 @@ bin/check-config.sh               # 要件ナビが開発用ログインのま�
 bin/up.sh                         # 全システムを起動
 ```
 
-`bin/fetch-apps.sh` は最後に `bin/init-secrets.sh` を呼び、所有者の入力が要らない `env/bacchus.env`（所有者用の共用トークン）を、なければ乱数で作る。既存のファイルは変えない。値はVMで `grep BACCHUS_USERS env/bacchus.env` のように読む。同じく、Nine-GageのAI設定 `env/ninegage.env` を空の値で作る。Nine-Gageのステージング用に、`env/ninegage-staging.env`（最初の管理者と暗号化の鍵）と `env/ninegage-staging-auth.env`（Caddyのパスワードとそのハッシュ）も作る。
+`bin/fetch-apps.sh` は最後に `bin/init-secrets.sh` を呼び、所有者の入力が要らない `env/bacchus.env`（所有者用の共用トークン）を、なければ乱数で作る。既存のファイルは変えない。値はVMで `grep BACCHUS_USERS env/bacchus.env` のように読む。
 
 パスワードのハッシュは `docker run --rm caddy:2.8.4 caddy hash-password --plaintext '<パスワード>'` で作り、単引用符付きで書く。平文のパスワード、`CHUCK_ADMIN_SECRET`、`GITHUB_SPONSORS_WEBHOOK_SECRET`、`MASTER_KEY`、`LOCAL_SETUP_TOKEN` はVMに置く `.env` 類と管理者の手元にだけ保管し、このリポジトリには入れない。
 
@@ -139,68 +138,14 @@ journalctl -u chuck-backup.service -n 5  # 直近の結果
 
 ## Nine-Gage（Nゲージのレイアウト設計）
 
-`https://nine-gage.<CHUCKのドメイン>` で開きます。Nine-Gage自身のログインがあり、Caddyのパスワードはかけません。
+専用のVM `ninegage-1` で動いています。構成・更新・バックアップは [ninegage/README.md](ninegage/README.md) を参照してください。このVMでは動かしません（`bin/check-config.sh` が止めます）。
 
-### イメージと更新
-
-VMではビルドしません。Nine-GageのCI（GitHub Actions）がテスト・型チェック・依存の監査・イメージの脆弱性検査を通ったものを `ghcr.io/ueemon/nine-gage-systems` に置き、自動更新（`chuck-update.timer`）が5分ごとに取り込みます。
-
-| タグ | いつ動く | 使う所 |
-|---|---|---|
-| `:main`（と `:main-<コミット>`） | Nine-Gage-Systems の main にマージしたとき | ステージング `nine-gage-staging` |
-| `:stable`（と `:1.2.3`） | 所有者がタグ `v1.2.3` を push したとき | 本番 `nine-gage` |
-
-本番に出すときは、ステージングで確かめてから Nine-Gage-Systems にタグを付けます（GitHubの「Releases」で `v1.2.3` を作るか、`git tag v1.2.3 && git push origin v1.2.3`）。戻すときは、前の版のコミットに新しいタグ（例 `v1.2.4`）を付けます。急ぐときは、VMの `.env` に `NINEGAGE_TAG=1.2.2` のように書いて `docker compose up -d nine-gage` すれば、その版に固定できます（消すと `stable` に戻る）。
-
-### ネットワークの分離
-
-Nine-Gageは、ほかのシステムと同じネットワーク（`default`）に入りません。本番は `ninegage-edge`、ステージングは `ninegage-staging-edge` にだけつながり、どちらもCaddyとしか通信できません。Nine-Gageから要件ナビのPostgreSQL、CHUCKの内部API、ocean-dataには届かず、本番とステージングも互いに届きません（外のAIのAPIとSMTPには出られます）。`bin/check-config.sh` がこの形を確認します。
-
-### ヘッダー
-
-Caddyが `Content-Security-Policy`（スクリプト・通信は自分のサイトだけ、埋め込み禁止）、`X-Frame-Options`、`Permissions-Policy` などを付けます（`caddy/Caddyfile` の `ninegage_headers`）。外部のスクリプトや画像を読むようにアプリを変えたときは、ここも直します。
-
-### ステージング
-
-`https://nine-gage-staging.<CHUCKのドメイン>` は main の最新を動かし、所有者と共同開発者が本番に出す前に確かめる場所です。データ・暗号化の鍵・最初の管理者は本番と別です（ボリューム `ninegage-staging-data`、`env/ninegage-staging.env`）。メールの設定がないのでユーザー登録はできず、ユーザーは管理画面で足します。
-
-入口のパスワードはVMで `grep password env/ninegage-staging-auth.env` で読み（ユーザー名は `staging`）、共同開発者に渡します。このパスワードで開けるのはステージングだけです。最初の管理者は `grep NINEGAGE_ADMIN env/ninegage-staging.env`。
-
-| ロール | できること |
+| 古いURL | 転送先 |
 |---|---|
-| 管理者 | AIの設定（プロバイダ・モデル・APIキー・接続先URL）、ユーザーの追加・ロール変更・パスワード再設定・削除、お知らせ、AIの使用量と料金 |
-| プレミアムユーザー | レイアウトの作成と、管理者が設定したAI（サーバーのキー）での提案。AIの設定は見えない。管理者が一般ユーザーの中から「AI利用を許可」で選ぶ |
-| 一般 | レイアウトの作成。自分で設定したAPIキーでだけAI提案を使える。だれでも `/signup` で登録でき、確認メールのリンクを開くとこのロールになる |
-| ログインなし | レイアウトの作成（ブラウザへの保存とファイルの書き出しだけ）。AI提案は使えない |
+| `https://nine-gage.<CHUCKのドメイン>/…` | `https://138-3-216-172.sslip.io/…` |
+| `https://nine-gage-staging.<CHUCKのドメイン>/…` | `https://staging.138-3-216-172.sslip.io/…` |
 
-サイト全体にパスワードはかけないので、ログインなしでもエディタを開けます。サーバーのAIを使えるのは管理者とプレミアムユーザーだけです。登録を止めるときは `env/ninegage.env` に `NINEGAGE_SIGNUP=closed` を足します。
-
-ユーザー登録には確認メールが要ります。`env/ninegage.env` の `NINEGAGE_SMTP_URL` と `NINEGAGE_MAIL_FROM` が空のあいだは、登録画面に「登録できません」と出ます。Gmail から送るときは、Googleアカウントで2段階認証を有効にしてアプリパスワードを作り、次のように書きます（`@` は `%40` にする）。
-
-```
-NINEGAGE_SMTP_URL=smtps://you%40gmail.com:アプリパスワード16文字@smtp.gmail.com:465
-NINEGAGE_MAIL_FROM="Nine-Gage <you@gmail.com>"
-```
-
-書いたら `docker compose up -d nine-gage` で反映します。メールのリンクは `NINEGAGE_PUBLIC_URL`（compose が `https://nine-gage.<CHUCK_DOMAIN>` を設定）から作ります。
-
-最初の管理者は `bin/init-secrets.sh` が `env/ninegage.env` に `NINEGAGE_ADMIN_USER=admin` と乱数の `NINEGAGE_ADMIN_PASSWORD` を書きます（既存のファイルにも、なければ追記）。VMで `grep NINEGAGE_ADMIN env/ninegage.env` で読み、ログインして「パスワード変更」で変えてください。この値はユーザーが1人もいないときだけ使われます。以降のユーザーは「管理」画面で追加します。
-
-ユーザーと管理者が設定したAIのキーは、ボリューム `ninegage-data`（コンテナの `/data/store.json`、権限600）に保存します。APIキーが入るので、秘密の値と同じくバックアップには含めません。一般ユーザーが自分で入れたAPIキーは、`env/ninegage.env` の `NINEGAGE_SECRET_KEY`（`bin/init-secrets.sh` が乱数で作る）で暗号化して保存します。この値を変えたり消したりすると、保存済みのキーは読めなくなり、各ユーザーに入れ直してもらうことになります。消えたときは最初の管理者が作り直され、ユーザーとAI設定はやり直しになります。
-
-`env/ninegage.env` のAIのキー（`ANTHROPIC_API_KEY` など）は、管理画面で空欄の項目の代わりに使われます。どれも空でかまいません。
-
-| 変数 | 内容 |
-|---|---|
-| `NINEGAGE_ADMIN_USER`、`NINEGAGE_ADMIN_PASSWORD` | 最初の管理者（10文字以上。`bin/check-config.sh` が確認） |
-| `NINEGAGE_SECRET_KEY` | 一般ユーザーのAPIキーを暗号化する鍵（32文字以上。`bin/init-secrets.sh` が作り、`bin/check-config.sh` が確認）。変えない |
-| `NINEGAGE_SIGNUP` | `closed` でユーザー登録を止める（既定は受け付ける） |
-| `NINEGAGE_SMTP_URL`、`NINEGAGE_MAIL_FROM` | 登録の確認メールを送るSMTPと差出人。空なら登録を受け付けない |
-| `AI_DEFAULT_PROVIDER` | 管理者が選ぶまで使うプロバイダ（`anthropic`・`openai`・`gemini`・`local`） |
-| `ANTHROPIC_API_KEY`、`OPENAI_API_KEY`、`GEMINI_API_KEY` ほか | 管理画面で空欄のときに使うキーとモデル |
-| `LOCAL_LLM_BASE_URL` | OpenAI互換のローカルLLM。URLはVM（コンテナ）から届くアドレス。コンテナの `localhost` はコンテナ自身 |
-
-`bin/check-config.sh` は、VMでのビルド、ほかのシステムと同じネットワークへの接続、ホストのポートの公開、最初の管理者や鍵のないNine-Gageを止めます。
+転送は一時的なもの（302）です。Nine-Gageに独自ドメインを付けたら、`caddy/Caddyfile` の転送先も変えます。
 
 ## 海日和（洋上気象・海象）
 
