@@ -50,3 +50,19 @@ if ! grep -q '^NINEGAGE_SMTP_URL=' env/ninegage.env; then
 	printf 'NINEGAGE_SMTP_URL=\nNINEGAGE_MAIL_FROM=\n' >> env/ninegage.env
 	echo "added empty Nine-Gage mail settings to env/ninegage.env"
 fi
+# Nine-Gage staging: its own first admin and secret key, no mail (sign-up stays closed), no AI keys.
+# Read the first admin on the VM: grep NINEGAGE_ADMIN env/ninegage-staging.env
+if [ ! -f env/ninegage-staging.env ]; then
+	printf 'NINEGAGE_ADMIN_USER=admin\nNINEGAGE_ADMIN_PASSWORD=%s\nNINEGAGE_SECRET_KEY=%s\nNINEGAGE_SMTP_URL=\nNINEGAGE_MAIL_FROM=\nAI_DEFAULT_PROVIDER=anthropic\nANTHROPIC_API_KEY=\nOPENAI_API_KEY=\nGEMINI_API_KEY=\n' \
+		"$(openssl rand -base64 18 | tr -d '/+=')" "$(openssl rand -hex 32)" > env/ninegage-staging.env
+	echo "created env/ninegage-staging.env"
+fi
+# The staging site's password, asked by Caddy. Give it to co-developers; it opens nothing else.
+# Read it on the VM: grep password env/ninegage-staging-auth.env
+if [ ! -f env/ninegage-staging-auth.env ]; then
+	password=$(openssl rand -base64 18 | tr -d '/+=')
+	hash=$(docker run --rm caddy:2.8.4 caddy hash-password --plaintext "$password")
+	# Single quotes: Compose would otherwise read the $ in the hash as variables.
+	printf "# password: %s\nNINEGAGE_STAGING_USER=staging\nNINEGAGE_STAGING_PASSWORD_HASH='%s'\n" "$password" "$hash" > env/ninegage-staging-auth.env
+	echo "created env/ninegage-staging-auth.env"
+fi

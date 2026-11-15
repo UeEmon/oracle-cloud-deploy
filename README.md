@@ -12,6 +12,7 @@ Oracle Cloud（東京リージョン、A1は無料枠内）のVM 1台で、複�
 | 要件ナビ | UeEmon/ai-requirements-navigator | `https://arn.<IP>.sslip.io` | 要件ナビ自身のログイン（`AUTH_MODE=local`） |
 | BACCHUS-SYSTEM | UeEmon/BACCHUS-SYSTEM | `https://bacchus.<IP>.sslip.io` | 個人用はなし（ブラウザ内に保存）。共用は `env/bacchus.env` の `BACCHUS_USERS` のトークン |
 | Nine-Gage（Nゲージのレイアウト設計） | UeEmon/Nine-Gage-Systems | `https://nine-gage.<IP>.sslip.io` | Nine-Gage自身のログイン（管理者・プレミアムユーザー・一般のロール、ログインなしでも閲覧可）。最初の管理者は `env/ninegage.env` |
+| Nine-Gage ステージング | 同上（mainの最新） | `https://nine-gage-staging.<IP>.sslip.io` | Caddyのパスワード（`env/ninegage-staging-auth.env`、CHUCKとは別）と、ステージング自身のログイン（`env/ninegage-staging.env`） |
 
 `<IP>` は予約済み公開IPのドットをハイフンにしたもの。独自ドメインがあれば置き換える。
 
@@ -48,7 +49,7 @@ bin/check-config.sh               # 要件ナビが開発用ログインのま�
 bin/up.sh                         # 全システムを起動
 ```
 
-`bin/fetch-apps.sh` は最後に `bin/init-secrets.sh` を呼び、所有者の入力が要らない `env/bacchus.env`（所有者用の共用トークン）を、なければ乱数で作る。既存のファイルは変えない。値はVMで `grep BACCHUS_USERS env/bacchus.env` のように読む。同じく、Nine-GageのAI設定 `env/ninegage.env` を空の値で作る。
+`bin/fetch-apps.sh` は最後に `bin/init-secrets.sh` を呼び、所有者の入力が要らない `env/bacchus.env`（所有者用の共用トークン）を、なければ乱数で作る。既存のファイルは変えない。値はVMで `grep BACCHUS_USERS env/bacchus.env` のように読む。同じく、Nine-GageのAI設定 `env/ninegage.env` を空の値で作る。Nine-Gageのステージング用に、`env/ninegage-staging.env`（最初の管理者と暗号化の鍵）と `env/ninegage-staging-auth.env`（Caddyのパスワードとそのハッシュ）も作る。
 
 パスワードのハッシュは `docker run --rm caddy:2.8.4 caddy hash-password --plaintext '<パスワード>'` で作り、単引用符付きで書く。平文のパスワード、`CHUCK_ADMIN_SECRET`、`GITHUB_SPONSORS_WEBHOOK_SECRET`、`MASTER_KEY`、`LOCAL_SETUP_TOKEN` はVMに置く `.env` 類と管理者の手元にだけ保管し、このリポジトリには入れない。
 
@@ -138,6 +139,31 @@ journalctl -u chuck-backup.service -n 5  # 直近の結果
 
 `https://nine-gage.<CHUCKのドメイン>` で開きます。Nine-Gage自身のログインがあり、Caddyのパスワードはかけません。
 
+### イメージと更新
+
+VMではビルドしません。Nine-GageのCI（GitHub Actions）がテスト・型チェック・依存の監査・イメージの脆弱性検査を通ったものを `ghcr.io/ueemon/nine-gage-systems` に置き、自動更新（`chuck-update.timer`）が5分ごとに取り込みます。
+
+| タグ | いつ動く | 使う所 |
+|---|---|---|
+| `:main`（と `:main-<コミット>`） | Nine-Gage-Systems の main にマージしたとき | ステージング `nine-gage-staging` |
+| `:stable`（と `:1.2.3`） | 所有者がタグ `v1.2.3` を push したとき | 本番 `nine-gage` |
+
+本番に出すときは、ステージングで確かめてから Nine-Gage-Systems にタグを付けます（GitHubの「Releases」で `v1.2.3` を作るか、`git tag v1.2.3 && git push origin v1.2.3`）。戻すときは、前の版のコミットに新しいタグ（例 `v1.2.4`）を付けます。急ぐときは、VMの `.env` に `NINEGAGE_TAG=1.2.2` のように書いて `docker compose up -d nine-gage` すれば、その版に固定できます（消すと `stable` に戻る）。
+
+### ネットワークの分離
+
+Nine-Gageは、ほかのシステムと同じネットワーク（`default`）に入りません。本番は `ninegage-edge`、ステージングは `ninegage-staging-edge` にだけつながり、どちらもCaddyとしか通信できません。Nine-Gageから要件ナビのPostgreSQL、CHUCKの内部API、ocean-dataには届かず、本番とステージングも互いに届きません（外のAIのAPIとSMTPには出られます）。`bin/check-config.sh` がこの形を確認します。
+
+### ヘッダー
+
+Caddyが `Content-Security-Policy`（スクリプト・通信は自分のサイトだけ、埋め込み禁止）、`X-Frame-Options`、`Permissions-Policy` などを付けます（`caddy/Caddyfile` の `ninegage_headers`）。外部のスクリプトや画像を読むようにアプリを変えたときは、ここも直します。
+
+### ステージング
+
+`https://nine-gage-staging.<CHUCKのドメイン>` は main の最新を動かし、所有者と共同開発者が本番に出す前に確かめる場所です。データ・暗号化の鍵・最初の管理者は本番と別です（ボリューム `ninegage-staging-data`、`env/ninegage-staging.env`）。メールの設定がないのでユーザー登録はできず、ユーザーは管理画面で足します。
+
+入口のパスワードはVMで `grep password env/ninegage-staging-auth.env` で読み（ユーザー名は `staging`）、共同開発者に渡します。このパスワードで開けるのはステージングだけです。最初の管理者は `grep NINEGAGE_ADMIN env/ninegage-staging.env`。
+
 | ロール | できること |
 |---|---|
 | 管理者 | AIの設定（プロバイダ・モデル・APIキー・接続先URL）、ユーザーの追加・ロール変更・パスワード再設定・削除、お知らせ、AIの使用量と料金 |
@@ -172,7 +198,7 @@ NINEGAGE_MAIL_FROM="Nine-Gage <you@gmail.com>"
 | `ANTHROPIC_API_KEY`、`OPENAI_API_KEY`、`GEMINI_API_KEY` ほか | 管理画面で空欄のときに使うキーとモデル |
 | `LOCAL_LLM_BASE_URL` | OpenAI互換のローカルLLM。URLはVM（コンテナ）から届くアドレス。コンテナの `localhost` はコンテナ自身 |
 
-`bin/check-config.sh` は、ログイン機能のないNine-Gage（パスワードなしで公開されてしまう）と、ホストのポートの公開を止めます。
+`bin/check-config.sh` は、VMでのビルド、ほかのシステムと同じネットワークへの接続、ホストのポートの公開、最初の管理者や鍵のないNine-Gageを止めます。
 
 ## 海日和（洋上気象・海象）
 
