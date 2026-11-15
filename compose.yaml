@@ -28,6 +28,8 @@ services:
     environment:
       NODE_ENV: production
       NINEGAGE_DATA_DIR: /data
+      # Links in the sign-up confirmation mail. Fixed here so a forged Host header cannot change them.
+      NINEGAGE_PUBLIC_URL: "https://nine-gage.${CHUCK_DOMAIN:?set CHUCK_DOMAIN in .env}"
       NEXT_TELEMETRY_DISABLED: "1"
     volumes:
       - ninegage-data:/data

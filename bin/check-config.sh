@@ -34,6 +34,8 @@ oceanports=$(printf '%s' "$config" | python3 -c "import json,sys;print(len(json.
 [ -s apps/Nine-Gage-Systems/Dockerfile ] || { echo "Missing apps/Nine-Gage-Systems/Dockerfile; merge the app to main and run bin/fetch-apps.sh" >&2; exit 1; }
 check nine-gage NODE_ENV production
 check nine-gage NINEGAGE_DATA_DIR /data
+ngurl=$(printf '%s' "$config" | python3 -c "import json,sys;print(json.load(sys.stdin)['services']['nine-gage']['environment'].get('NINEGAGE_PUBLIC_URL',''))")
+case "$ngurl" in https://nine-gage.?*) ;; *) echo "nine-gage needs NINEGAGE_PUBLIC_URL=https://nine-gage.<CHUCK_DOMAIN> for its confirmation mail" >&2; exit 1 ;; esac
 # Caddy no longer asks for a password, so the app must have its own login and a first admin.
 [ -s apps/Nine-Gage-Systems/src/lib/server/auth.ts ] || { echo "apps/Nine-Gage-Systems has no login; merge the app's login change before serving it without a password" >&2; exit 1; }
 ngadmin=$(printf '%s' "$config" | python3 -c "import json,sys;e=json.load(sys.stdin)['services']['nine-gage']['environment'];print(1 if e.get('NINEGAGE_ADMIN_USER') and len(e.get('NINEGAGE_ADMIN_PASSWORD',''))>=10 else 0)")

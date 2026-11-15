@@ -43,3 +43,10 @@ if ! grep -q '^NINEGAGE_SECRET_KEY=.' env/ninegage.env; then
 	printf 'NINEGAGE_SECRET_KEY=%s\n' "$(openssl rand -hex 32)" >> env/ninegage.env
 	echo "added the Nine-Gage secret key to env/ninegage.env"
 fi
+# Nine-Gage's mail for sign-up confirmation. Empty means sign-up is closed until the owner fills it in, e.g.
+# NINEGAGE_SMTP_URL=smtps://you%40gmail.com:APP_PASSWORD@smtp.gmail.com:465 and NINEGAGE_MAIL_FROM="Nine-Gage <you@gmail.com>"
+if ! grep -q '^NINEGAGE_SMTP_URL=' env/ninegage.env; then
+	[ -z "$(tail -c1 env/ninegage.env)" ] || echo >> env/ninegage.env
+	printf 'NINEGAGE_SMTP_URL=\nNINEGAGE_MAIL_FROM=\n' >> env/ninegage.env
+	echo "added empty Nine-Gage mail settings to env/ninegage.env"
+fi

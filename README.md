@@ -11,7 +11,7 @@ Oracle Cloud（東京リージョン、A1は無料枠内）のVM 1台で、複�
 | CHUCK 位置ゲートウェイの試験シミュレーター（管制画面） | 同上 | `https://sim.<IP>.sslip.io` | Caddyのパスワード（CHUCK管理サイトと同じ）。サーバー内からゲートウェイへ送る |
 | 要件ナビ | UeEmon/ai-requirements-navigator | `https://arn.<IP>.sslip.io` | 要件ナビ自身のログイン（`AUTH_MODE=local`） |
 | BACCHUS-SYSTEM | UeEmon/BACCHUS-SYSTEM | `https://bacchus.<IP>.sslip.io` | 個人用はなし（ブラウザ内に保存）。共用は `env/bacchus.env` の `BACCHUS_USERS` のトークン |
-| Nine-Gage（Nゲージのレイアウト設計） | UeEmon/Nine-Gage-Systems | `https://nine-gage.<IP>.sslip.io` | Nine-Gage自身のログイン（管理者・AI利用可能・一般のロール、ログインなしでも閲覧可）。最初の管理者は `env/ninegage.env` |
+| Nine-Gage（Nゲージのレイアウト設計） | UeEmon/Nine-Gage-Systems | `https://nine-gage.<IP>.sslip.io` | Nine-Gage自身のログイン（管理者・プレミアムユーザー・一般のロール、ログインなしでも閲覧可）。最初の管理者は `env/ninegage.env` |
 
 `<IP>` は予約済み公開IPのドットをハイフンにしたもの。独自ドメインがあれば置き換える。
 
@@ -141,11 +141,20 @@ journalctl -u chuck-backup.service -n 5  # 直近の結果
 | ロール | できること |
 |---|---|
 | 管理者 | AIの設定（プロバイダ・モデル・APIキー・接続先URL）、ユーザーの追加・ロール変更・パスワード再設定・削除、お知らせ、AIの使用量と料金 |
-| AI利用可能 | レイアウトの作成と、管理者が設定したAI（サーバーのキー）での提案。AIの設定は見えない |
-| 一般 | レイアウトの作成。自分で設定したAPIキーでだけAI提案を使える。だれでも `/signup` で登録でき、登録した人はこのロールになる |
+| プレミアムユーザー | レイアウトの作成と、管理者が設定したAI（サーバーのキー）での提案。AIの設定は見えない。管理者が一般ユーザーの中から「AI利用を許可」で選ぶ |
+| 一般 | レイアウトの作成。自分で設定したAPIキーでだけAI提案を使える。だれでも `/signup` で登録でき、確認メールのリンクを開くとこのロールになる |
 | ログインなし | レイアウトの作成（ブラウザへの保存とファイルの書き出しだけ）。AI提案は使えない |
 
-サイト全体にパスワードはかけないので、ログインなしでもエディタを開けます。サーバーのAIを使えるのは管理者と「AI利用可能」だけです。登録を止めるときは `env/ninegage.env` に `NINEGAGE_SIGNUP=closed` を足します。
+サイト全体にパスワードはかけないので、ログインなしでもエディタを開けます。サーバーのAIを使えるのは管理者とプレミアムユーザーだけです。登録を止めるときは `env/ninegage.env` に `NINEGAGE_SIGNUP=closed` を足します。
+
+ユーザー登録には確認メールが要ります。`env/ninegage.env` の `NINEGAGE_SMTP_URL` と `NINEGAGE_MAIL_FROM` が空のあいだは、登録画面に「登録できません」と出ます。Gmail から送るときは、Googleアカウントで2段階認証を有効にしてアプリパスワードを作り、次のように書きます（`@` は `%40` にする）。
+
+```
+NINEGAGE_SMTP_URL=smtps://you%40gmail.com:アプリパスワード16文字@smtp.gmail.com:465
+NINEGAGE_MAIL_FROM="Nine-Gage <you@gmail.com>"
+```
+
+書いたら `docker compose up -d nine-gage` で反映します。メールのリンクは `NINEGAGE_PUBLIC_URL`（compose が `https://nine-gage.<CHUCK_DOMAIN>` を設定）から作ります。
 
 最初の管理者は `bin/init-secrets.sh` が `env/ninegage.env` に `NINEGAGE_ADMIN_USER=admin` と乱数の `NINEGAGE_ADMIN_PASSWORD` を書きます（既存のファイルにも、なければ追記）。VMで `grep NINEGAGE_ADMIN env/ninegage.env` で読み、ログインして「パスワード変更」で変えてください。この値はユーザーが1人もいないときだけ使われます。以降のユーザーは「管理」画面で追加します。
 
@@ -158,6 +167,7 @@ journalctl -u chuck-backup.service -n 5  # 直近の結果
 | `NINEGAGE_ADMIN_USER`、`NINEGAGE_ADMIN_PASSWORD` | 最初の管理者（10文字以上。`bin/check-config.sh` が確認） |
 | `NINEGAGE_SECRET_KEY` | 一般ユーザーのAPIキーを暗号化する鍵（32文字以上。`bin/init-secrets.sh` が作り、`bin/check-config.sh` が確認）。変えない |
 | `NINEGAGE_SIGNUP` | `closed` でユーザー登録を止める（既定は受け付ける） |
+| `NINEGAGE_SMTP_URL`、`NINEGAGE_MAIL_FROM` | 登録の確認メールを送るSMTPと差出人。空なら登録を受け付けない |
 | `AI_DEFAULT_PROVIDER` | 管理者が選ぶまで使うプロバイダ（`anthropic`・`openai`・`gemini`・`local`） |
 | `ANTHROPIC_API_KEY`、`OPENAI_API_KEY`、`GEMINI_API_KEY` ほか | 管理画面で空欄のときに使うキーとモデル |
 | `LOCAL_LLM_BASE_URL` | OpenAI互換のローカルLLM。URLはVM（コンテナ）から届くアドレス。コンテナの `localhost` はコンテナ自身 |
