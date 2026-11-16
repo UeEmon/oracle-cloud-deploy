@@ -1,4 +1,5 @@
-# Nine-Gage's own VM: one HTTPS entrance (Caddy) in front of production and staging, nothing else.
+# Nine-Gage's own VM: one HTTPS entrance (Caddy) in front of production and staging, plus the papercraft generator
+# (moved here from papercraft-1 on 2026-11-16), which only production reaches over its own network.
 #   cd ~/oracle-cloud-deploy/ninegage && bin/init-secrets.sh && bin/check-config.sh && bin/up.sh
 # The images come from the app's CI (ghcr.io): :stable = the latest release tag v*, :main = the latest merge.
 # Each app sits on its own network shared only with Caddy, so production and staging cannot reach each other.
@@ -29,10 +30,14 @@ services:
     expose:
       - "3000"
     # First admin, NINEGAGE_SECRET_KEY, NINEGAGE_BACKUP_KEY, mail and fallback AI keys (bin/init-secrets.sh).
-    env_file: env/ninegage.env
+    # env/papercraft.env adds PAPERCRAFT_API_TOKEN, the same value the generator checks.
+    env_file:
+      - env/ninegage.env
+      - env/papercraft.env
     environment:
       NODE_ENV: production
       NINEGAGE_DATA_DIR: /data
+      PAPERCRAFT_URL: http://papercraft:8086
       # Links in the sign-up confirmation mail. Fixed here so a forged Host header cannot change them.
       NINEGAGE_PUBLIC_URL: "https://${NINEGAGE_DOMAIN:?set NINEGAGE_DOMAIN in .env}"
       NEXT_TELEMETRY_DISABLED: "1"
@@ -40,6 +45,7 @@ services:
       - ninegage-data:/data
     networks:
       - prod-edge
+      - papercraft
     mem_limit: 1g
     cpus: 0.75
 
@@ -61,6 +67,33 @@ services:
       - staging-edge
     mem_limit: 512m
     cpus: 0.25
+
+  # The papercraft generator: no host port, no internet entrance. Only nine-gage shares its network.
+  papercraft:
+    image: ghcr.io/ueemon/ai-paper-modelar:${PAPERCRAFT_TAG:-stable}
+    expose:
+      - "8086"
+    # PAPERCRAFT_API_TOKEN (bin/init-secrets.sh).
+    env_file: env/papercraft.env
+    # The image already runs as a non-root user (Dockerfile USER app).
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m
+    networks:
+      - papercraft
+    mem_limit: 512m
+    cpus: 0.75
+    pids_limit: 64
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      driver: json-file
+      options:
+        max-size: 5m
+        max-file: "3"
 
   https-proxy:
     image: caddy:2.8.4
@@ -96,6 +129,7 @@ services:
 networks:
   prod-edge:
   staging-edge:
+  papercraft:
 
 volumes:
   ninegage-data:

@@ -2,10 +2,6 @@
 # Refuse to start if a public app would come up with development settings.
 set -eu
 cd "$(dirname "$0")/.."
-# Refuse an empty or unpublished OpenWeather checkout instead of serving a broken site.
-for asset in index.html style.css app.js weather.mjs gis-terrain.mjs bathymetry-gis.mjs browser-settings.mjs collector-admin.html collector-admin.js areas.js vendor/cesium/Cesium.js collector/Dockerfile collector/server.py collector/additional_sources.py collector/bathymetry.py collector/sources.json collector/areas.json; do
- [ -s "apps/OpenWeather/$asset" ] || { echo "Missing apps/OpenWeather/$asset; publish the OpenWeather source and run bin/fetch-apps.sh" >&2; exit 1; }
-done
 config=$(docker compose config --format json)
 check() {
 	actual=$(printf '%s' "$config" | python3 -c "import json,sys;print(json.load(sys.stdin)['services']['$1']['environment'].get('$2',''))")
@@ -27,12 +23,9 @@ web=$(printf '%s' "$config" | python3 -c "import json,sys;print(' '.join(str(p.g
 # The gateway simulator has no login: only Caddy (with the admin password) may reach it.
 simports=$(printf '%s' "$config" | python3 -c "import json,sys;print(len(json.load(sys.stdin)['services'].get('gateway-simulator',{}).get('ports') or []))")
 [ "$simports" = 0 ] || { echo "gateway-simulator must not publish ports; it is reached only through Caddy" >&2; exit 1; }
-# Shared data API must stay on the internal Compose network.
-oceanports=$(printf '%s' "$config" | python3 -c "import json,sys;print(len(json.load(sys.stdin)['services']['ocean-data'].get('ports') or []))")
-[ "$oceanports" = 0 ] || { echo "ocean-data must not publish host ports" >&2; exit 1; }
-# Nine-Gage runs on its own VM now (ninegage/); this VM only forwards its old addresses.
-for svc in nine-gage nine-gage-staging; do
+# Nine-Gage runs on its own VM (ninegage/), not on this VM.
+for svc in nine-gage nine-gage-staging ocean-data; do
 	gone=$(printf '%s' "$config" | python3 -c "import json,sys;print(1 if '$svc' in json.load(sys.stdin)['services'] else 0)")
-	[ "$gone" = 0 ] || { echo "$svc runs on ninegage-1 (ninegage/), not on this VM" >&2; exit 1; }
+	[ "$gone" = 0 ] || { echo "$svc does not run on this VM (removed 2026-11-16)" >&2; exit 1; }
 done
 echo "config OK"

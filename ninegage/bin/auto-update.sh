@@ -11,7 +11,7 @@ main() {
 	bin/init-secrets.sh
 	docker compose pull --quiet
 	state="deploy $(git -C .. rev-parse HEAD)"
-	for svc in nine-gage nine-gage-staging https-proxy; do
+	for svc in nine-gage nine-gage-staging papercraft https-proxy; do
 		image=$(docker compose config --format json | python3 -c "import json,sys;print(json.load(sys.stdin)['services']['$svc']['image'])")
 		state="$state $svc $(docker image inspect --format '{{.Id}}' "$image")"
 	done

@@ -5,7 +5,7 @@ cd "$(dirname "$0")/.."
 config=$(docker compose config --format json)
 py() { printf '%s' "$config" | python3 -c "import json,sys;c=json.load(sys.stdin);s=c['services'];$1"; }
 fail() { echo "$*" >&2; exit 1; }
-[ "$(py "print(' '.join(sorted(s)))")" = "https-proxy nine-gage nine-gage-staging" ] || fail "only https-proxy, nine-gage and nine-gage-staging may run here"
+[ "$(py "print(' '.join(sorted(s)))")" = "https-proxy nine-gage nine-gage-staging papercraft" ] || fail "only https-proxy, nine-gage, nine-gage-staging and papercraft may run here"
 for svc in nine-gage nine-gage-staging; do
 	case "$(py "print('' if 'build' in s['$svc'] else s['$svc'].get('image',''))")" in
 		ghcr.io/ueemon/nine-gage-systems:?*) ;;
@@ -20,8 +20,19 @@ done
 [ "$(py "print(s['nine-gage']['environment'].get('NINEGAGE_PUBLIC_URL',''))")" = "https://$(py "print(s['https-proxy']['environment']['NINEGAGE_DOMAIN'])")" ] || fail "nine-gage NINEGAGE_PUBLIC_URL must be https://<NINEGAGE_DOMAIN>"
 # Each app on its own network, shared only with Caddy.
 nets() { py "print(' '.join(sorted((s['$1'].get('networks') or {'default':None}).keys())))"; }
-[ "$(nets nine-gage)" = prod-edge ] || fail "nine-gage must be on prod-edge only, got '$(nets nine-gage)'"
+[ "$(nets nine-gage)" = "papercraft prod-edge" ] || fail "nine-gage must be on prod-edge and papercraft only, got '$(nets nine-gage)'"
 [ "$(nets nine-gage-staging)" = staging-edge ] || fail "nine-gage-staging must be on staging-edge only, got '$(nets nine-gage-staging)'"
+# The papercraft generator: CI image, no host port, reachable only from nine-gage, with a shared token.
+case "$(py "print('' if 'build' in s['papercraft'] else s['papercraft'].get('image',''))")" in
+	ghcr.io/ueemon/ai-paper-modelar:?*) ;;
+	*) fail "papercraft must run ghcr.io/ueemon/ai-paper-modelar:<tag> without build" ;;
+esac
+[ "$(py "print(len(s['papercraft'].get('ports') or []))")" = 0 ] || fail "papercraft must not publish host ports"
+[ "$(nets papercraft)" = papercraft ] || fail "papercraft must be on its own network only, got '$(nets papercraft)'"
+[ "$(nets https-proxy | tr ' ' '\n' | grep -c '^papercraft$' || true)" = 0 ] || fail "Caddy must not join the papercraft network"
+[ "$(py "a=s['papercraft']['environment'].get('PAPERCRAFT_API_TOKEN','');b=s['nine-gage']['environment'].get('PAPERCRAFT_API_TOKEN','');print(1 if len(a)>=32 and a==b else 0)")" = 1 ] \
+	|| fail "env/papercraft.env needs a PAPERCRAFT_API_TOKEN of 32+ characters, the same for both (bin/init-secrets.sh)"
+[ "$(py "print(s['nine-gage']['environment'].get('PAPERCRAFT_URL',''))")" = http://papercraft:8086 ] || fail "nine-gage PAPERCRAFT_URL must be http://papercraft:8086"
 # Caddy's staging password (docker compose config prints each $ as $$).
 [ "$(py "h=s['https-proxy']['environment'].get('NINEGAGE_STAGING_PASSWORD_HASH','').replace('\$\$','\$');print(1 if h.startswith('\$2') and len(h)>50 else 0)")" = 1 ] \
 	|| fail "env/staging-auth.env needs NINEGAGE_STAGING_PASSWORD_HASH (bin/init-secrets.sh)"

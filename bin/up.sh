@@ -1,8 +1,8 @@
 #!/bin/sh
-# Start or rebuild every system.
+# Start or rebuild every system, and remove containers of systems taken out of compose.yaml.
 set -eu
 cd "$(dirname "$0")/.."
-docker compose up -d --build
+docker compose up -d --build --remove-orphans
 # The caddy directory is a bind mount, so a new site is not picked up unless Caddy reloads.
 # reload checks the new file first and keeps the running config when it is invalid.
 docker compose exec -T https-proxy caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile \
