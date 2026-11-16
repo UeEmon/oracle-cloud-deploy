@@ -84,3 +84,7 @@ NINEGAGE_BACKUP_KEY=<控えた鍵> node scripts/restore-backup.mjs ninegage.ngba
 ## 死活確認
 
 Nine-Gage-Systemsのリポジトリ変数 `NINEGAGE_HEALTH_URL` に `https://<NINEGAGE_DOMAIN>/api/health` を設定すると、GitHub Actionsが15分ごとに確かめ、応答がなければ所有者にメールが届きます。
+
+## ペーパークラフトジェネレーター
+
+「再現してみた」の仮オブジェクトを展開図にするジェネレーターは、別のVM `papercraft-1` で動きます（`../papercraft/README.md`）。`env/ninegage.env` に `PAPERCRAFT_URL=http://<papercraft-1 のプライベートIP>:8086` と `PAPERCRAFT_API_TOKEN=<papercraft-1 の値>` を足して `bin/up.sh` すると、SenroLab から使えるようになります。足さなければ展開図のボタンは出ません。
