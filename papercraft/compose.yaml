@@ -1,0 +1,31 @@
+# The papercraft generator's own VM (papercraft-1): one container, no HTTPS entrance, not on the internet.
+#   cd ~/oracle-cloud-deploy/papercraft && bin/init-secrets.sh && bin/check-config.sh && bin/up.sh
+# The image comes from the app's CI (ghcr.io): :stable = the latest release tag v*.
+# Only Nine-Gage's VM reaches it, over the VCN's private addresses (security list papercraft-sl), with a token.
+name: papercraft
+
+services:
+  papercraft:
+    image: ghcr.io/ueemon/ai-paper-modelar:${PAPERCRAFT_TAG:-stable}
+    # Bound to the VM's private IP only, never 0.0.0.0, so the public IP never answers on 8080.
+    ports:
+      - "${PAPERCRAFT_BIND_IP:?set PAPERCRAFT_BIND_IP (this VM's private IP) in .env}:8080:8080"
+    # PAPERCRAFT_API_TOKEN (bin/init-secrets.sh). Nine-Gage sends the same value.
+    env_file: env/papercraft.env
+    user: node
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m
+    mem_limit: 512m
+    cpus: 0.75
+    pids_limit: 64
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      driver: json-file
+      options:
+        max-size: 5m
+        max-file: "3"
