@@ -7,12 +7,12 @@ name: papercraft
 services:
   papercraft:
     image: ghcr.io/ueemon/ai-paper-modelar:${PAPERCRAFT_TAG:-stable}
-    # Bound to the VM's private IP only, never 0.0.0.0, so the public IP never answers on 8080.
+    # Bound to the VM's private IP only, never 0.0.0.0, so the public IP never answers on 8086.
     ports:
-      - "${PAPERCRAFT_BIND_IP:?set PAPERCRAFT_BIND_IP (this VM's private IP) in .env}:8080:8080"
+      - "${PAPERCRAFT_BIND_IP:?set PAPERCRAFT_BIND_IP (this VM's private IP) in .env}:8086:8086"
     # PAPERCRAFT_API_TOKEN (bin/init-secrets.sh). Nine-Gage sends the same value.
     env_file: env/papercraft.env
-    user: node
+    # The image already runs as a non-root user (Dockerfile USER app).
     restart: unless-stopped
     read_only: true
     tmpfs:

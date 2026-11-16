@@ -10,11 +10,11 @@ case "$(py "print('' if 'build' in s['papercraft'] else s['papercraft'].get('ima
 	ghcr.io/ueemon/ai-paper-modelar:?*) ;;
 	*) fail "papercraft must run ghcr.io/ueemon/ai-paper-modelar:<tag> without build" ;;
 esac
-# One port, 8080, on a private address (10.x, 172.16-31.x or 192.168.x) only.
+# One port, 8086, on a private address (10.x, 172.16-31.x or 192.168.x) only.
 ports=$(py "print(' '.join(f\"{p.get('host_ip','')}:{p.get('published','')}:{p.get('target','')}\" for p in s['papercraft'].get('ports') or []))")
 case "$ports" in
-	10.*:8080:8080 | 192.168.*:8080:8080 | 172.1[6-9].*:8080:8080 | 172.2[0-9].*:8080:8080 | 172.3[01].*:8080:8080) ;;
-	*) fail "papercraft must publish only 8080 on this VM's private IP, got '$ports'" ;;
+	10.*:8086:8086 | 192.168.*:8086:8086 | 172.1[6-9].*:8086:8086 | 172.2[0-9].*:8086:8086 | 172.3[01].*:8086:8086) ;;
+	*) fail "papercraft must publish only 8086 on this VM's private IP, got '$ports'" ;;
 esac
 [ "$(py "print(1 if len(s['papercraft']['environment'].get('PAPERCRAFT_API_TOKEN',''))>=32 else 0)")" = 1 ] \
 	|| fail "env/papercraft.env needs a PAPERCRAFT_API_TOKEN of 32+ characters (bin/init-secrets.sh)"
