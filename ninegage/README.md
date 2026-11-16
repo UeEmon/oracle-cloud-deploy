@@ -25,7 +25,7 @@ Nine-Gage（UeEmon/Nine-Gage-Systems）を、CHUCKなどと別のVMで動かす�
 |---|---|
 | サブネット `ninegage-public` | VCN `chuck-vcn` の 10.0.1.0/24、公開、ルート表は既存（インターネットゲートウェイ） |
 | セキュリティ・リスト `ninegage-sl` | 受信: TCP 80／443・UDP 443 は 0.0.0.0/0、TCP 22 は所有者のIP/32 だけ、ICMP 3/4。送信: すべて |
-| VM `ninegage-1` | `VM.Standard.A1.Flex` 1 OCPU・6GB（CHUCKの1 OCPU・6GBと合わせて無料枠内）、Ubuntu 24.04 aarch64、ブート50GB、SSH鍵は `~/.ssh/chuck_oci`、ユーザーデータはこのリポジトリの `cloud-init.yaml` |
+| VM `ninegage-1` | `VM.Standard.A1.Flex` 1 OCPU・6GB、Ubuntu 24.04 aarch64、ブート50GB、SSH鍵は `~/.ssh/chuck_oci`、ユーザーデータはこのリポジトリの `cloud-init.yaml` |
 | 予約済み公開IP `ninegage-ip` | `ninegage-1` に割り当てる |
 | 動的グループ `ninegage-backup` | `ninegage-1` だけ（`instance.id = '<OCID>'`） |
 | ポリシー `ninegage-backup` | `Allow dynamic-group ninegage-backup to manage objects in tenancy where target.bucket.name='chuck-backups'` |
@@ -87,4 +87,10 @@ Nine-Gage-Systemsのリポジトリ変数 `NINEGAGE_HEALTH_URL` に `https://<NI
 
 ## ペーパークラフトジェネレーター
 
-「再現してみた」の仮オブジェクトを展開図にするジェネレーターは、別のVM `papercraft-1` で動きます（`../papercraft/README.md`）。`env/ninegage.env` に `PAPERCRAFT_URL=http://<papercraft-1 のプライベートIP>:8086` と `PAPERCRAFT_API_TOKEN=<papercraft-1 の値>` を足して `bin/up.sh` すると、SenroLab から使えるようになります。足さなければ展開図のボタンは出ません。
+「再現してみた」の仮オブジェクトを展開図にするジェネレーター（UeEmon/ai-paper-modelar）は、2026-11-16にVM `papercraft-1` からこのVMの別コンテナ `papercraft` へ移しました。イメージはCIの `ghcr.io/ueemon/ai-paper-modelar:stable`（`.env` の `PAPERCRAFT_TAG` で戻せる）で、メモリ512MB・0.75 CPUに制限しています。
+
+- ホストのポートは開けず、インターネットからもCaddyからも届きません。専用のDockerネットワーク `papercraft` を本番の `nine-gage` とだけ共有し、ステージングからも届きません。
+- 本番の `nine-gage` は `PAPERCRAFT_URL=http://papercraft:8086`（`compose.yaml` で固定）で呼び、トークンは両方とも `env/papercraft.env` の `PAPERCRAFT_API_TOKEN` を読みます。`bin/init-secrets.sh` がなければ作ります。`env/ninegage.env` に古い `PAPERCRAFT_URL`・`PAPERCRAFT_API_TOKEN` が残っていても、こちらが優先されます。
+- `bin/check-config.sh` が、ローカルビルド・ホストのポート・ネットワークの共有範囲・トークンの不一致を止めます。
+
+確かめ方: `docker compose exec nine-gage wget -qO- http://papercraft:8086/health` が `{"ok":true}`。SenroLab の仮オブジェクトに「展開図」が出て、押すと印刷用の画面が開けば完了です。

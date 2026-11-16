@@ -46,3 +46,8 @@ if [ ! -f env/staging-auth.env ]; then
 	printf "# password: %s\nNINEGAGE_STAGING_USER=staging\nNINEGAGE_STAGING_PASSWORD_HASH='%s'\n" "$password" "$hash" > env/staging-auth.env
 	echo "created env/staging-auth.env"
 fi
+# The papercraft generator's API token, read by both papercraft and nine-gage (compose.yaml).
+if [ ! -f env/papercraft.env ]; then
+	printf 'PAPERCRAFT_API_TOKEN=%s\n' "$(openssl rand -hex 32)" > env/papercraft.env
+	echo "created env/papercraft.env"
+fi

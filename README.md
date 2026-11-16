@@ -11,7 +11,7 @@ Oracle Cloud（東京リージョン、A1は無料枠内）のVM 1台で、複�
 | CHUCK 位置ゲートウェイの試験シミュレーター（管制画面） | 同上 | `https://sim.<IP>.sslip.io` | Caddyのパスワード（CHUCK管理サイトと同じ）。サーバー内からゲートウェイへ送る |
 | 要件ナビ | UeEmon/ai-requirements-navigator | `https://arn.<IP>.sslip.io` | 要件ナビ自身のログイン（`AUTH_MODE=local`） |
 | BACCHUS-SYSTEM | UeEmon/BACCHUS-SYSTEM | `https://bacchus.<IP>.sslip.io` | 個人用はなし（ブラウザ内に保存）。共用は `env/bacchus.env` の `BACCHUS_USERS` のトークン |
-| Nine-Gage（Nゲージのレイアウト設計）とそのステージング | UeEmon/Nine-Gage-Systems | 専用VM `ninegage-1` へ移した（[ninegage/README.md](ninegage/README.md)）。`https://nine-gage.<IP>.sslip.io` と `https://nine-gage-staging.<IP>.sslip.io` は新しいURLへ転送する | — |
+| Nine-Gage（Nゲージのレイアウト設計）・ステージング・ペーパークラフトジェネレーター | UeEmon/Nine-Gage-Systems、UeEmon/ai-paper-modelar | 専用VM `ninegage-1`（[ninegage/README.md](ninegage/README.md)） | Nine-Gage自身のログイン |
 
 `<IP>` は予約済み公開IPのドットをハイフンにしたもの。独自ドメインがあれば置き換える。
 
@@ -26,7 +26,7 @@ CHUCKは公開版（`compose.public.yaml` で `public_server.py` を起動）を
 
 作業の経緯と現在の状態は [引き継ぎ書](docs/HANDOVER.md) を参照。
 
-Nine-Gageは2026-11-16に専用のVM `ninegage-1` へ移した（[ninegage/README.md](ninegage/README.md)）。このVMのCaddyは、古いURLを新しいURLへパスごと転送するだけ（`caddy/Caddyfile`）。移す前のデータはボリューム `ninegage-data` に残してあり、使っていない。
+2026-11-16に基盤を整理し、このVM（`chuck-1`）は上の表のCHUCK・要件ナビ・BACCHUSだけを動かす。海日和（`ocean-data`）とNine-Gageの旧URLの転送はやめ、そのデータも消した。Nine-Gageとペーパークラフトジェネレーターは `ninegage-1` で動く。
 
 ## Oracle Cloudの資源
 
@@ -138,15 +138,4 @@ journalctl -u chuck-backup.service -n 5  # 直近の結果
 
 ## Nine-Gage（Nゲージのレイアウト設計）
 
-専用のVM `ninegage-1` で動いています。構成・更新・バックアップは [ninegage/README.md](ninegage/README.md) を参照してください。このVMでは動かしません（`bin/check-config.sh` が止めます）。
-
-| 古いURL | 転送先 |
-|---|---|
-| `https://nine-gage.<CHUCKのドメイン>/…` | `https://138-3-216-172.sslip.io/…` |
-| `https://nine-gage-staging.<CHUCKのドメイン>/…` | `https://staging.138-3-216-172.sslip.io/…` |
-
-転送は一時的なもの（302）です。Nine-Gageに独自ドメインを付けたら、`caddy/Caddyfile` の転送先も変えます。
-
-## 海日和（洋上気象・海象）
-
-`UeEmon/OpenWeather` のmainを既存の更新タイマーが取得し、`https://weather.<CHUCK_DOMAIN>` に配信します。海日和は認証なしで閲覧できます。収集設定 `/collector/` だけ既存のCHUCK管理サイトと同じ認証を使います。外部データは専用の `ocean-data` コンテナが収集・保存し、共通APIで各システムへ提供します。海日和はCaddy経由でこのAPIを利用します。[詳細と確認手順](docs/OPENWEATHER.md)を参照してください。
+専用のVM `ninegage-1`（`https://138-3-216-172.sslip.io`）で、ペーパークラフトジェネレーターと一緒に動いています。構成・更新・バックアップは [ninegage/README.md](ninegage/README.md) を参照してください。このVMでは動かしません（`bin/check-config.sh` が止めます）。

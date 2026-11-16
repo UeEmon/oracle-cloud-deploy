@@ -17,31 +17,6 @@ include:
     env_file: env/bacchus.env
 
 services:
-  ocean-data:
-    build: ./apps/OpenWeather/collector
-    expose:
-      - "8080"
-    environment:
-      DATA_PATH: /data/ocean.sqlite3
-    volumes:
-      - ocean-data:/data
-    restart: unless-stopped
-    read_only: true
-    tmpfs:
-      - /tmp:size=16m
-    mem_limit: 256m
-    cpus: 0.5
-    pids_limit: 64
-    cap_drop:
-      - ALL
-    security_opt:
-      - no-new-privileges:true
-    logging:
-      driver: json-file
-      options:
-        max-size: 5m
-        max-file: "2"
-
   https-proxy:
     image: caddy:2.8.4
     ports:
@@ -55,10 +30,9 @@ services:
       CHUCK_ADMIN_SECRET: "${CHUCK_ADMIN_SECRET:?set CHUCK_ADMIN_SECRET in .env}"
       ARN_DOMAIN: "${ARN_DOMAIN:?set ARN_DOMAIN in .env}"
       ARN_UPSTREAM: arn-app:8787
-      NO_PROXY: ocean-data,hf-propagation,position-gateway,public-data,gateway-simulator,arn-app,bacchus,localhost,127.0.0.1
-      no_proxy: ocean-data,hf-propagation,position-gateway,public-data,gateway-simulator,arn-app,bacchus,localhost,127.0.0.1
+      NO_PROXY: hf-propagation,position-gateway,public-data,gateway-simulator,arn-app,bacchus,localhost,127.0.0.1
+      no_proxy: hf-propagation,position-gateway,public-data,gateway-simulator,arn-app,bacchus,localhost,127.0.0.1
     volumes:
-      - ./apps/OpenWeather:/srv/openweather:ro
       # The directory, not the file: git pull replaces the Caddyfile with a new inode, which a
       # single-file bind mount never sees, so the reload in bin/up.sh would keep the old config.
       - ./caddy:/etc/caddy:ro
@@ -69,15 +43,10 @@ services:
       - position-gateway
       - app
       - bacchus
-      - ocean-data
     restart: unless-stopped
     security_opt:
       - no-new-privileges:true
 
 volumes:
-  # Nine-Gage's data before it moved to ninegage-1 (2026-11-16). Nothing uses them now; kept for a while as a fallback.
-  ninegage-data:
-  ninegage-staging-data:
-  ocean-data:
   caddy-data:
   caddy-config:
