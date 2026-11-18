@@ -1,11 +1,12 @@
 # Nine-Gage 専用VM
 
-Nine-Gage（UeEmon/Nine-Gage-Systems）を、CHUCKなどと別のVMで動かす構成です。入口のCaddy、本番、ステージングの3つだけを動かします。
+Nine-Gage（UeEmon/Nine-Gage-Systems）を、CHUCKなどと別のVMで動かす構成です。入口のCaddy、本番、ステージング、ペーパークラフトジェネレーター、共有サイト「みんなのレイアウト」を動かします。
 
 | サイト | URL | ログイン |
 |---|---|---|
 | 本番（最新のリリース `v*` = イメージ `:stable`） | `https://<NINEGAGE_DOMAIN>` | Nine-Gage自身のログイン |
 | ステージング（mainの最新 = `:main`） | `https://staging.<NINEGAGE_DOMAIN>` | Caddyのパスワード（`env/staging-auth.env`、ユーザー名 `staging`）と、ステージング自身のログイン |
+| みんなのレイアウト（共有サイト。最新のリリース = `ghcr.io/ueemon/nine-gage-share:stable`） | `https://share.<NINEGAGE_DOMAIN>` | 見るのはだれでも。投稿は本番の SenroLab のアカウント（本番がログインを確かめて渡す） |
 
 `NINEGAGE_DOMAIN` は、独自ドメインを取るまでは、このVMの予約済み公開IPのドットをハイフンにした `<IP>.sslip.io` です。ドメインを取ったら `.env` の `NINEGAGE_DOMAIN` を変えて `bin/up.sh` するだけで移れます（DNSのAレコードをこのVMのIPに向けておく）。
 
@@ -94,3 +95,16 @@ Nine-Gage-Systemsのリポジトリ変数 `NINEGAGE_HEALTH_URL` に `https://<NI
 - `bin/check-config.sh` が、ローカルビルド・ホストのポート・ネットワークの共有範囲・トークンの不一致を止めます。
 
 確かめ方: `docker compose exec nine-gage wget -qO- http://papercraft:8086/health` が `{"ok":true}`。SenroLab の仮オブジェクトに「展開図」が出て、押すと印刷用の画面が開けば完了です。
+
+## みんなのレイアウト（共有サイト）
+
+レイアウトを投稿・共有し、投稿どうしをボードの端の線路でつなぐサイト（Nine-Gage-Systems の `share/`、[share/README.md](https://github.com/UeEmon/Nine-Gage-Systems/blob/main/share/README.md)）を、2026-11-18に別コンテナ `share` として加えました。イメージはCIの `ghcr.io/ueemon/nine-gage-share:stable`（本体と同じく、タグ `v*` を付けたときに作られる。`.env` の `SHARE_TAG` で戻せる）で、メモリ384MB・0.5 CPUに制限しています。
+
+- 専用のDockerネットワーク `share-edge` をCaddyとだけ共有し、本番・ステージング・ペーパークラフトには届きません。ホストのポートも開けません。
+- データはボリューム `ninegage_share-data` の `share.sqlite`。毎日のバックアップで `share.sqlite` として一緒に置きます（中身は公開の投稿と SenroLab のユーザー名だけなので暗号化はしない）。
+- ログインはパスワードを持たず、本番が署名した合図で受け取ります。鍵は `env/share-link.env` の `SENROLAB_SHARE_SECRET`（本番と共有サイトの両方が読む）と、共有サイトだけの `env/share.env` の `SHARE_SESSION_SECRET`。どちらも `bin/init-secrets.sh` がなければ作ります（自動更新でも呼ばれる）。ステージングには渡しません。
+- 本番の `SENROLAB_SHARE_URL`（`https://share.<NINEGAGE_DOMAIN>`）と、共有サイトの `SENROLAB_URL`（`https://<NINEGAGE_DOMAIN>`）は `compose.yaml` で固定し、`bin/check-config.sh` が確かめます。
+
+**初めて出すときの順番**: `nine-gage-share:stable` のイメージがないうちにこの構成を main に入れると、自動更新の `docker compose pull` が失敗して、本番の更新まで止まります。先に Nine-Gage-Systems の変更をマージしてタグ `v*` を付け、Actions でイメージができたら、GitHub のパッケージ `nine-gage-share` の公開範囲を Public にしてから（本体の `nine-gage-systems` と同じ）、この構成をマージしてください。
+
+確かめ方: `https://share.<NINEGAGE_DOMAIN>/api/health` が `{"ok":true}`。本番の画面右上の「みんなのレイアウト」から共有サイトに移り、「SenroLabのアカウントでログイン」で本番のログインを経て戻ってくれば完了です。

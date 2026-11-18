@@ -40,3 +40,13 @@ staging.{$NINEGAGE_DOMAIN} {
 	}
 	reverse_proxy nine-gage-staging:3000
 }
+
+# The layout sharing site (みんなのレイアウト). Logins come from production (SenroLab accounts); anyone may browse.
+share.{$NINEGAGE_DOMAIN} {
+	encode gzip
+	import ninegage_headers
+	request_body {
+		max_size 3MB
+	}
+	reverse_proxy share:3100
+}
