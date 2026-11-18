@@ -86,6 +86,16 @@ NINEGAGE_BACKUP_KEY=<控えた鍵> node scripts/restore-backup.mjs ninegage.ngba
 
 Nine-Gage-Systemsのリポジトリ変数 `NINEGAGE_HEALTH_URL` に `https://<NINEGAGE_DOMAIN>/api/health` を設定すると、GitHub Actionsが15分ごとに確かめ、応答がなければ所有者にメールが届きます。
 
+## 改善リクエストの GitHub 連携
+
+利用者がアプリの「改善リクエスト」から送った内容を、Nine-Gage-Systems の Issue にします（アプリ側の説明は Nine-Gage-Systems の README「改善リクエスト」）。トークンがなければ、管理画面に保存するだけです。
+
+1. GitHub の [Fine-grained personal access tokens](https://github.com/settings/personal-access-tokens/new) で、Repository access を「Only select repositories → UeEmon/Nine-Gage-Systems」、Permissions を「Issues: Read and write」だけにして作る（有効期限は1年など。切れたら作り直す）。
+2. VMで `env/ninegage.env` に `NINEGAGE_FEEDBACK_GITHUB_TOKEN=<トークン>` を足し、`bin/up.sh`。本番だけに入れ、ステージングには入れない（試しの送信が公開の Issue にならないように）。
+3. トークンの値は所有者のMacの `~/.chuck-deploy/ninegage/` にも控える。
+
+確かめ方: 本番で「改善リクエスト」から1件送り、`改善リクエスト` ラベルの Issue ができること。失敗したときは管理画面の「改善リクエスト」に理由が出て、「Issue にする」で登録し直せます。
+
 ## ペーパークラフトジェネレーター
 
 「再現してみた」の仮オブジェクトを展開図にするジェネレーター（UeEmon/ai-paper-modelar）は、2026-11-16にVM `papercraft-1` からこのVMの別コンテナ `papercraft` へ移しました。イメージはCIの `ghcr.io/ueemon/ai-paper-modelar:stable`（`.env` の `PAPERCRAFT_TAG` で戻せる）で、メモリ512MB・0.75 CPUに制限しています。
