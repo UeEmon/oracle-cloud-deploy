@@ -22,6 +22,9 @@ AI_DEFAULT_PROVIDER=anthropic
 ANTHROPIC_API_KEY=
 OPENAI_API_KEY=
 GEMINI_API_KEY=
+# In-app improvement requests become GitHub Issues with this fine-grained token (Nine-Gage-Systems only, Issues: Read and write).
+# Empty means requests are only kept in the admin screen.
+NINEGAGE_FEEDBACK_GITHUB_TOKEN=
 EOT
 	echo "created env/ninegage.env"
 fi
