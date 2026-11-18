@@ -51,3 +51,12 @@ if [ ! -f env/papercraft.env ]; then
 	printf 'PAPERCRAFT_API_TOKEN=%s\n' "$(openssl rand -hex 32)" > env/papercraft.env
 	echo "created env/papercraft.env"
 fi
+# The sharing site: its own login cookie key, and the handoff key it shares with production (nine-gage).
+if [ ! -f env/share.env ]; then
+	printf 'SHARE_SESSION_SECRET=%s\n' "$(openssl rand -hex 32)" > env/share.env
+	echo "created env/share.env"
+fi
+if [ ! -f env/share-link.env ]; then
+	printf 'SENROLAB_SHARE_SECRET=%s\n' "$(openssl rand -hex 32)" > env/share-link.env
+	echo "created env/share-link.env"
+fi

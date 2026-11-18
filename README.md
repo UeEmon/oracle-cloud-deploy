@@ -11,7 +11,7 @@ Oracle Cloud（東京リージョン、A1は無料枠内）のVM 1台で、複�
 | CHUCK 位置ゲートウェイの試験シミュレーター（管制画面） | 同上 | `https://sim.<IP>.sslip.io` | Caddyのパスワード（CHUCK管理サイトと同じ）。サーバー内からゲートウェイへ送る |
 | 要件ナビ | UeEmon/ai-requirements-navigator | `https://arn.<IP>.sslip.io` | 要件ナビ自身のログイン（`AUTH_MODE=local`） |
 | BACCHUS-SYSTEM | UeEmon/BACCHUS-SYSTEM | `https://bacchus.<IP>.sslip.io` | 個人用はなし（ブラウザ内に保存）。共用は `env/bacchus.env` の `BACCHUS_USERS` のトークン |
-| Nine-Gage（Nゲージのレイアウト設計）・ステージング・ペーパークラフトジェネレーター | UeEmon/Nine-Gage-Systems、UeEmon/ai-paper-modelar | 専用VM `ninegage-1`（[ninegage/README.md](ninegage/README.md)） | Nine-Gage自身のログイン |
+| Nine-Gage（Nゲージのレイアウト設計）・ステージング・ペーパークラフトジェネレーター・共有サイト「みんなのレイアウト」 | UeEmon/Nine-Gage-Systems、UeEmon/ai-paper-modelar | 専用VM `ninegage-1`（[ninegage/README.md](ninegage/README.md)） | Nine-Gage自身のログイン |
 
 `<IP>` は予約済み公開IPのドットをハイフンにしたもの。独自ドメインがあれば置き換える。
 
