@@ -1,6 +1,6 @@
 # Nine-Gage's own VM: one HTTPS entrance (Caddy) in front of production and staging, plus the papercraft generator
 # (moved here from papercraft-1 on 2026-11-16), which only production reaches over its own network,
-# and the layout sharing site "みんなのレイアウト" (share.<NINEGAGE_DOMAIN>, added 2026-11-18) in its own container.
+# and the terminal for layout sharing (terminal.<NINEGAGE_DOMAIN>; added 2026-11-18 as share, renamed 2026-11-24) in its own container.
 #   cd ~/oracle-cloud-deploy/ninegage && bin/init-secrets.sh && bin/check-config.sh && bin/up.sh
 # The images come from the app's CI (ghcr.io): :stable = the latest release tag v*, :main = the latest merge.
 # Each app sits on its own network shared only with Caddy, so production and staging cannot reach each other.
@@ -32,17 +32,17 @@ services:
       - "3000"
     # First admin, NINEGAGE_SECRET_KEY, NINEGAGE_BACKUP_KEY, mail and fallback AI keys (bin/init-secrets.sh).
     # env/papercraft.env adds PAPERCRAFT_API_TOKEN, the same value the generator checks.
-    # env/share-link.env adds SENROLAB_SHARE_SECRET, the same key the sharing site checks the login handoff with.
+    # env/terminal-link.env adds SENROLAB_TERMINAL_SECRET, the same key the terminal checks the login handoff with.
     env_file:
       - env/ninegage.env
       - env/papercraft.env
-      - env/share-link.env
+      - env/terminal-link.env
     environment:
       NODE_ENV: production
       NINEGAGE_DATA_DIR: /data
       PAPERCRAFT_URL: http://papercraft:8086
-      # The sharing site. Fixed here so the login handoff only ever returns there.
-      SENROLAB_SHARE_URL: "https://share.${NINEGAGE_DOMAIN:?set NINEGAGE_DOMAIN in .env}"
+      # The terminal. Fixed here so the login handoff only ever returns there.
+      SENROLAB_TERMINAL_URL: "https://terminal.${NINEGAGE_DOMAIN:?set NINEGAGE_DOMAIN in .env}"
       # Links in the sign-up confirmation mail. Fixed here so a forged Host header cannot change them.
       NINEGAGE_PUBLIC_URL: "https://${NINEGAGE_DOMAIN:?set NINEGAGE_DOMAIN in .env}"
       NEXT_TELEMETRY_DISABLED: "1"
@@ -100,19 +100,19 @@ services:
         max-size: 5m
         max-file: "3"
 
-  # The layout sharing site (share/ in Nine-Gage-Systems). Its own data; logins come from production through a signed
-  # handoff (SENROLAB_SHARE_SECRET), so it never sees passwords. It talks to no other container; only Caddy reaches it.
-  share:
-    image: ghcr.io/ueemon/nine-gage-share:${SHARE_TAG:-stable}
+  # The terminal, for layout sharing (terminal/ in Nine-Gage-Systems). Its own data; logins come from production through a signed
+  # handoff (SENROLAB_TERMINAL_SECRET), so it never sees passwords. It talks to no other container; only Caddy reaches it.
+  terminal:
+    image: ghcr.io/ueemon/nine-gage-terminal:${TERMINAL_TAG:-stable}
     expose:
       - "3100"
-    # SHARE_SESSION_SECRET (env/share.env) and SENROLAB_SHARE_SECRET (env/share-link.env, shared with nine-gage).
+    # TERMINAL_SESSION_SECRET (env/terminal.env) and SENROLAB_TERMINAL_SECRET (env/terminal-link.env, shared with nine-gage).
     env_file:
-      - env/share.env
-      - env/share-link.env
+      - env/terminal.env
+      - env/terminal-link.env
     environment:
       NODE_ENV: production
-      SHARE_DATA_DIR: /data
+      TERMINAL_DATA_DIR: /data
       SENROLAB_URL: "https://${NINEGAGE_DOMAIN:?set NINEGAGE_DOMAIN in .env}"
       NEXT_TELEMETRY_DISABLED: "1"
     user: node
@@ -120,11 +120,11 @@ services:
     read_only: true
     tmpfs:
       - /tmp:size=32m
-      - /app/share/.next/cache:size=64m,uid=1000,gid=1000
+      - /app/terminal/.next/cache:size=64m,uid=1000,gid=1000
     volumes:
-      - share-data:/data
+      - terminal-data:/data
     networks:
-      - share-edge
+      - terminal-edge
     mem_limit: 384m
     cpus: 0.5
     pids_limit: 128
@@ -156,11 +156,11 @@ services:
     networks:
       - prod-edge
       - staging-edge
-      - share-edge
+      - terminal-edge
     depends_on:
       - nine-gage
       - nine-gage-staging
-      - share
+      - terminal
     restart: unless-stopped
     mem_limit: 256m
     security_opt:
@@ -175,11 +175,13 @@ networks:
   prod-edge:
   staging-edge:
   papercraft:
-  share-edge:
+  terminal-edge:
 
 volumes:
   ninegage-data:
   ninegage-staging-data:
-  share-data:
+  # The volume made before the rename (share → terminal, 2026-11-24). Keeping its name keeps the posts.
+  terminal-data:
+    name: ninegage_share-data
   caddy-data:
   caddy-config:

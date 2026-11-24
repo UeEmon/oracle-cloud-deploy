@@ -54,12 +54,21 @@ if [ ! -f env/papercraft.env ]; then
 	printf 'PAPERCRAFT_API_TOKEN=%s\n' "$(openssl rand -hex 32)" > env/papercraft.env
 	echo "created env/papercraft.env"
 fi
-# The sharing site: its own login cookie key, and the handoff key it shares with production (nine-gage).
-if [ ! -f env/share.env ]; then
-	printf 'SHARE_SESSION_SECRET=%s\n' "$(openssl rand -hex 32)" > env/share.env
-	echo "created env/share.env"
+# The terminal: its own login cookie key, and the handoff key it shares with production (nine-gage).
+# Files from before the rename (share → terminal, 2026-11-24) keep their values, so logins and the handoff carry on.
+if [ ! -f env/terminal.env ] && [ -f env/share.env ]; then
+	sed 's/^SHARE_SESSION_SECRET=/TERMINAL_SESSION_SECRET=/' env/share.env > env/terminal.env
+	echo "created env/terminal.env from env/share.env"
 fi
-if [ ! -f env/share-link.env ]; then
-	printf 'SENROLAB_SHARE_SECRET=%s\n' "$(openssl rand -hex 32)" > env/share-link.env
-	echo "created env/share-link.env"
+if [ ! -f env/terminal-link.env ] && [ -f env/share-link.env ]; then
+	sed 's/^SENROLAB_SHARE_SECRET=/SENROLAB_TERMINAL_SECRET=/' env/share-link.env > env/terminal-link.env
+	echo "created env/terminal-link.env from env/share-link.env"
+fi
+if [ ! -f env/terminal.env ]; then
+	printf 'TERMINAL_SESSION_SECRET=%s\n' "$(openssl rand -hex 32)" > env/terminal.env
+	echo "created env/terminal.env"
+fi
+if [ ! -f env/terminal-link.env ]; then
+	printf 'SENROLAB_TERMINAL_SECRET=%s\n' "$(openssl rand -hex 32)" > env/terminal-link.env
+	echo "created env/terminal-link.env"
 fi

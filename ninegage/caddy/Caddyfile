@@ -41,12 +41,18 @@ staging.{$NINEGAGE_DOMAIN} {
 	reverse_proxy nine-gage-staging:3000
 }
 
-# The layout sharing site (みんなのレイアウト). Logins come from production (SenroLab accounts); anyone may browse.
-share.{$NINEGAGE_DOMAIN} {
+# The terminal (layout sharing; formerly みんなのレイアウト). Logins come from production (SenroLab accounts); anyone may browse.
+terminal.{$NINEGAGE_DOMAIN} {
 	encode gzip
 	import ninegage_headers
 	request_body {
 		max_size 3MB
 	}
-	reverse_proxy share:3100
+	reverse_proxy terminal:3100
+}
+
+# The old address from before the rename (share → terminal, 2026-11-24): keep old links working.
+share.{$NINEGAGE_DOMAIN} {
+	import ninegage_headers
+	redir https://terminal.{$NINEGAGE_DOMAIN}{uri} permanent
 }

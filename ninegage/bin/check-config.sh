@@ -5,7 +5,7 @@ cd "$(dirname "$0")/.."
 config=$(docker compose config --format json)
 py() { printf '%s' "$config" | python3 -c "import json,sys;c=json.load(sys.stdin);s=c['services'];$1"; }
 fail() { echo "$*" >&2; exit 1; }
-[ "$(py "print(' '.join(sorted(s)))")" = "https-proxy nine-gage nine-gage-staging papercraft share" ] || fail "only https-proxy, nine-gage, nine-gage-staging, papercraft and share may run here"
+[ "$(py "print(' '.join(sorted(s)))")" = "https-proxy nine-gage nine-gage-staging papercraft terminal" ] || fail "only https-proxy, nine-gage, nine-gage-staging, papercraft and terminal may run here"
 for svc in nine-gage nine-gage-staging; do
 	case "$(py "print('' if 'build' in s['$svc'] else s['$svc'].get('image',''))")" in
 		ghcr.io/ueemon/nine-gage-systems:?*) ;;
@@ -33,22 +33,22 @@ esac
 [ "$(py "a=s['papercraft']['environment'].get('PAPERCRAFT_API_TOKEN','');b=s['nine-gage']['environment'].get('PAPERCRAFT_API_TOKEN','');print(1 if len(a)>=32 and a==b else 0)")" = 1 ] \
 	|| fail "env/papercraft.env needs a PAPERCRAFT_API_TOKEN of 32+ characters, the same for both (bin/init-secrets.sh)"
 [ "$(py "print(s['nine-gage']['environment'].get('PAPERCRAFT_URL',''))")" = http://papercraft:8086 ] || fail "nine-gage PAPERCRAFT_URL must be http://papercraft:8086"
-# The sharing site: CI image, no host port, only Caddy reaches it, its own cookie key, the same handoff key as production.
-case "$(py "print('' if 'build' in s['share'] else s['share'].get('image',''))")" in
-	ghcr.io/ueemon/nine-gage-share:?*) ;;
-	*) fail "share must run ghcr.io/ueemon/nine-gage-share:<tag> without build" ;;
+# The terminal: CI image, no host port, only Caddy reaches it, its own cookie key, the same handoff key as production.
+case "$(py "print('' if 'build' in s['terminal'] else s['terminal'].get('image',''))")" in
+	ghcr.io/ueemon/nine-gage-terminal:?*) ;;
+	*) fail "terminal must run ghcr.io/ueemon/nine-gage-terminal:<tag> without build" ;;
 esac
-[ "$(py "print(len(s['share'].get('ports') or []))")" = 0 ] || fail "share must not publish host ports"
-[ "$(nets share)" = share-edge ] || fail "share must be on share-edge only, got '$(nets share)'"
-[ "$(py "e=s['share']['environment'];print(e.get('NODE_ENV'),e.get('SHARE_DATA_DIR'))")" = "production /data" ] || fail "share needs NODE_ENV=production and SHARE_DATA_DIR=/data"
-[ "$(py "print(1 if len(s['share']['environment'].get('SHARE_SESSION_SECRET',''))>=32 else 0)")" = 1 ] || fail "env/share.env needs a SHARE_SESSION_SECRET of 32+ characters (bin/init-secrets.sh)"
-[ "$(py "a=s['share']['environment'].get('SENROLAB_SHARE_SECRET','');b=s['nine-gage']['environment'].get('SENROLAB_SHARE_SECRET','');print(1 if len(a)>=32 and a==b else 0)")" = 1 ] \
-	|| fail "env/share-link.env needs a SENROLAB_SHARE_SECRET of 32+ characters, the same for share and nine-gage (bin/init-secrets.sh)"
+[ "$(py "print(len(s['terminal'].get('ports') or []))")" = 0 ] || fail "terminal must not publish host ports"
+[ "$(nets terminal)" = terminal-edge ] || fail "terminal must be on terminal-edge only, got '$(nets terminal)'"
+[ "$(py "e=s['terminal']['environment'];print(e.get('NODE_ENV'),e.get('TERMINAL_DATA_DIR'))")" = "production /data" ] || fail "terminal needs NODE_ENV=production and TERMINAL_DATA_DIR=/data"
+[ "$(py "print(1 if len(s['terminal']['environment'].get('TERMINAL_SESSION_SECRET',''))>=32 else 0)")" = 1 ] || fail "env/terminal.env needs a TERMINAL_SESSION_SECRET of 32+ characters (bin/init-secrets.sh)"
+[ "$(py "a=s['terminal']['environment'].get('SENROLAB_TERMINAL_SECRET','');b=s['nine-gage']['environment'].get('SENROLAB_TERMINAL_SECRET','');print(1 if len(a)>=32 and a==b else 0)")" = 1 ] \
+	|| fail "env/terminal-link.env needs a SENROLAB_TERMINAL_SECRET of 32+ characters, the same for terminal and nine-gage (bin/init-secrets.sh)"
 domain=$(py "print(s['https-proxy']['environment']['NINEGAGE_DOMAIN'])")
-[ "$(py "print(s['share']['environment'].get('SENROLAB_URL',''))")" = "https://$domain" ] || fail "share SENROLAB_URL must be https://<NINEGAGE_DOMAIN>"
-[ "$(py "print(s['nine-gage']['environment'].get('SENROLAB_SHARE_URL',''))")" = "https://share.$domain" ] || fail "nine-gage SENROLAB_SHARE_URL must be https://share.<NINEGAGE_DOMAIN>"
-[ "$(py "print(s['nine-gage-staging']['environment'].get('SENROLAB_SHARE_SECRET',''))")" = "" ] || fail "staging must not hold the sharing site's handoff key"
-[ "$(nets https-proxy | tr ' ' '\n' | grep -c '^share-edge$' || true)" = 1 ] || fail "Caddy must be on share-edge to reach the sharing site"
+[ "$(py "print(s['terminal']['environment'].get('SENROLAB_URL',''))")" = "https://$domain" ] || fail "terminal SENROLAB_URL must be https://<NINEGAGE_DOMAIN>"
+[ "$(py "print(s['nine-gage']['environment'].get('SENROLAB_TERMINAL_URL',''))")" = "https://terminal.$domain" ] || fail "nine-gage SENROLAB_TERMINAL_URL must be https://terminal.<NINEGAGE_DOMAIN>"
+[ "$(py "print(s['nine-gage-staging']['environment'].get('SENROLAB_TERMINAL_SECRET',''))")" = "" ] || fail "staging must not hold the terminal's handoff key"
+[ "$(nets https-proxy | tr ' ' '\n' | grep -c '^terminal-edge$' || true)" = 1 ] || fail "Caddy must be on terminal-edge to reach the terminal"
 # Caddy's staging password (docker compose config prints each $ as $$).
 [ "$(py "h=s['https-proxy']['environment'].get('NINEGAGE_STAGING_PASSWORD_HASH','').replace('\$\$','\$');print(1 if h.startswith('\$2') and len(h)>50 else 0)")" = 1 ] \
 	|| fail "env/staging-auth.env needs NINEGAGE_STAGING_PASSWORD_HASH (bin/init-secrets.sh)"
