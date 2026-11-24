@@ -1,0 +1,25 @@
+# PR と main への push で、Nine-Gage の VM の Caddyfile が Caddy に読めるかを確かめる（本番と同じ caddy:2.8.4）。
+name: Check
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  caddy:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate ninegage/caddy/Caddyfile
+        run: |
+          hash=$(docker run --rm caddy:2.8.4 caddy hash-password --plaintext check-only)
+          docker run --rm \
+            -e NINEGAGE_DOMAIN=192-0-2-1.sslip.io \
+            -e NINEGAGE_STAGING_USER=check \
+            -e NINEGAGE_STAGING_PASSWORD_HASH="$hash" \
+            -v "$PWD/ninegage/caddy:/etc/caddy:ro" \
+            caddy:2.8.4 caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
