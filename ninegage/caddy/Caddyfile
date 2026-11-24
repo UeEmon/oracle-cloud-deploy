@@ -17,14 +17,27 @@
 	}
 }
 
-# Production: Nine-Gage's own login; anyone may open the editor and sign up.
-{$NINEGAGE_DOMAIN} {
+# Production: one app on two addresses (the app tells them apart by Host, src/proxy.ts in Nine-Gage-Systems).
+# www = the top page with login, sign-up and account; platform = the editor. Anyone may open the editor and sign up.
+www.{$NINEGAGE_DOMAIN}, platform.{$NINEGAGE_DOMAIN} {
 	encode gzip
 	import ninegage_headers
 	request_body {
 		max_size 2MB
 	}
 	reverse_proxy nine-gage:3000
+}
+
+# The bare domain: the top page for /, the platform for every other path (the editor's address until 2026-11-25).
+{$NINEGAGE_DOMAIN} {
+	import ninegage_headers
+	@top path /
+	handle @top {
+		redir https://www.{$NINEGAGE_DOMAIN}/ permanent
+	}
+	handle {
+		redir https://platform.{$NINEGAGE_DOMAIN}{uri} permanent
+	}
 }
 
 # Staging (the latest main) behind its own password, kept out of search engines.
@@ -59,7 +72,7 @@ share.{$NINEGAGE_DOMAIN} {
 
 # The addresses before senrolab.com (until 2026-11-25): keep old links working.
 138-3-216-172.sslip.io {
-	redir https://{$NINEGAGE_DOMAIN}{uri} permanent
+	redir https://platform.{$NINEGAGE_DOMAIN}{uri} permanent
 }
 
 staging.138-3-216-172.sslip.io {

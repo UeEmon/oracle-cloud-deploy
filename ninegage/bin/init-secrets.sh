@@ -14,8 +14,9 @@ if [ ! -f env/ninegage.env ]; then
 NINEGAGE_ADMIN_USER=admin
 NINEGAGE_ADMIN_PASSWORD=$(rand)
 NINEGAGE_SECRET_KEY=$(openssl rand -hex 32)
-# Sign-up confirmation mail. Empty means sign-up is closed, e.g.
-# NINEGAGE_SMTP_URL=smtps://you%40gmail.com:APP_PASSWORD@smtp.gmail.com:465 and NINEGAGE_MAIL_FROM="Nine-Gage <you@gmail.com>"
+# Sign-up confirmation and password reset mail. Empty means sign-up and reset are closed. OCI Email Delivery (README):
+# NINEGAGE_SMTP_URL=smtp://<SMTP user, URL-encoded>:<SMTP password, URL-encoded>@smtp.email.ap-tokyo-1.oci.oraclecloud.com:587
+# NINEGAGE_MAIL_FROM="SenroLab <noreply@senrolab.com>"  (an approved sender)
 NINEGAGE_SMTP_URL=
 NINEGAGE_MAIL_FROM=
 AI_DEFAULT_PROVIDER=anthropic

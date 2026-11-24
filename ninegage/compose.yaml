@@ -43,8 +43,11 @@ services:
       PAPERCRAFT_URL: http://papercraft:8086
       # The terminal. Fixed here so the login handoff only ever returns there.
       SENROLAB_TERMINAL_URL: "https://terminal.${NINEGAGE_DOMAIN:?set NINEGAGE_DOMAIN in .env}"
-      # Links in the sign-up confirmation mail. Fixed here so a forged Host header cannot change them.
-      NINEGAGE_PUBLIC_URL: "https://${NINEGAGE_DOMAIN:?set NINEGAGE_DOMAIN in .env}"
+      # The platform (editor) and the top page (login, sign-up, account) of the same app, and the cookie domain that shares
+      # the login between them. Fixed here so a forged Host header cannot change the links in mail.
+      NINEGAGE_PUBLIC_URL: "https://platform.${NINEGAGE_DOMAIN:?set NINEGAGE_DOMAIN in .env}"
+      NINEGAGE_HOME_URL: "https://www.${NINEGAGE_DOMAIN:?set NINEGAGE_DOMAIN in .env}"
+      NINEGAGE_COOKIE_DOMAIN: "${NINEGAGE_DOMAIN:?set NINEGAGE_DOMAIN in .env}"
       NEXT_TELEMETRY_DISABLED: "1"
     volumes:
       - ninegage-data:/data
@@ -113,7 +116,8 @@ services:
     environment:
       NODE_ENV: production
       TERMINAL_DATA_DIR: /data
-      SENROLAB_URL: "https://${NINEGAGE_DOMAIN:?set NINEGAGE_DOMAIN in .env}"
+      # The platform: the login handoff and the "build on the platform" link.
+      SENROLAB_URL: "https://platform.${NINEGAGE_DOMAIN:?set NINEGAGE_DOMAIN in .env}"
       NEXT_TELEMETRY_DISABLED: "1"
     user: node
     restart: unless-stopped

@@ -17,7 +17,10 @@ for svc in nine-gage nine-gage-staging; do
 		|| fail "$svc needs NINEGAGE_ADMIN_USER, a NINEGAGE_ADMIN_PASSWORD of 10+ and a NINEGAGE_SECRET_KEY of 32+ characters (bin/init-secrets.sh)"
 done
 [ "$(py "print(1 if len(s['nine-gage']['environment'].get('NINEGAGE_BACKUP_KEY',''))>=32 else 0)")" = 1 ] || fail "env/ninegage.env needs a NINEGAGE_BACKUP_KEY of 32+ characters (bin/init-secrets.sh)"
-[ "$(py "print(s['nine-gage']['environment'].get('NINEGAGE_PUBLIC_URL',''))")" = "https://$(py "print(s['https-proxy']['environment']['NINEGAGE_DOMAIN'])")" ] || fail "nine-gage NINEGAGE_PUBLIC_URL must be https://<NINEGAGE_DOMAIN>"
+[ "$(py "e=s['nine-gage']['environment'];print(e.get('NINEGAGE_PUBLIC_URL',''),e.get('NINEGAGE_HOME_URL',''),e.get('NINEGAGE_COOKIE_DOMAIN',''))")" = \
+	"https://platform.$(py "print(s['https-proxy']['environment']['NINEGAGE_DOMAIN'])") https://www.$(py "print(s['https-proxy']['environment']['NINEGAGE_DOMAIN'])") $(py "print(s['https-proxy']['environment']['NINEGAGE_DOMAIN'])")" ] \
+	|| fail "nine-gage needs NINEGAGE_PUBLIC_URL=https://platform.<NINEGAGE_DOMAIN>, NINEGAGE_HOME_URL=https://www.<NINEGAGE_DOMAIN> and NINEGAGE_COOKIE_DOMAIN=<NINEGAGE_DOMAIN>"
+[ "$(py "e=s['nine-gage-staging']['environment'];print(e.get('NINEGAGE_HOME_URL',''),e.get('NINEGAGE_COOKIE_DOMAIN',''))")" = " " ] || fail "staging must keep its own address and cookie (no NINEGAGE_HOME_URL or NINEGAGE_COOKIE_DOMAIN)"
 # Each app on its own network, shared only with Caddy.
 nets() { py "print(' '.join(sorted((s['$1'].get('networks') or {'default':None}).keys())))"; }
 [ "$(nets nine-gage)" = "papercraft prod-edge" ] || fail "nine-gage must be on prod-edge and papercraft only, got '$(nets nine-gage)'"
@@ -45,7 +48,7 @@ esac
 [ "$(py "a=s['terminal']['environment'].get('SENROLAB_TERMINAL_SECRET','');b=s['nine-gage']['environment'].get('SENROLAB_TERMINAL_SECRET','');print(1 if len(a)>=32 and a==b else 0)")" = 1 ] \
 	|| fail "env/terminal-link.env needs a SENROLAB_TERMINAL_SECRET of 32+ characters, the same for terminal and nine-gage (bin/init-secrets.sh)"
 domain=$(py "print(s['https-proxy']['environment']['NINEGAGE_DOMAIN'])")
-[ "$(py "print(s['terminal']['environment'].get('SENROLAB_URL',''))")" = "https://$domain" ] || fail "terminal SENROLAB_URL must be https://<NINEGAGE_DOMAIN>"
+[ "$(py "print(s['terminal']['environment'].get('SENROLAB_URL',''))")" = "https://platform.$domain" ] || fail "terminal SENROLAB_URL must be https://platform.<NINEGAGE_DOMAIN>"
 [ "$(py "print(s['nine-gage']['environment'].get('SENROLAB_TERMINAL_URL',''))")" = "https://terminal.$domain" ] || fail "nine-gage SENROLAB_TERMINAL_URL must be https://terminal.<NINEGAGE_DOMAIN>"
 [ "$(py "print(s['nine-gage-staging']['environment'].get('SENROLAB_TERMINAL_SECRET',''))")" = "" ] || fail "staging must not hold the terminal's handoff key"
 [ "$(nets https-proxy | tr ' ' '\n' | grep -c '^terminal-edge$' || true)" = 1 ] || fail "Caddy must be on terminal-edge to reach the terminal"
