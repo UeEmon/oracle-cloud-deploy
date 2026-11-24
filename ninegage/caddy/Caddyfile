@@ -56,3 +56,16 @@ share.{$NINEGAGE_DOMAIN} {
 	import ninegage_headers
 	redir https://terminal.{$NINEGAGE_DOMAIN}{uri} permanent
 }
+
+# The addresses before senrolab.com (until 2026-11-25): keep old links working.
+138-3-216-172.sslip.io {
+	redir https://{$NINEGAGE_DOMAIN}{uri} permanent
+}
+
+staging.138-3-216-172.sslip.io {
+	redir https://staging.{$NINEGAGE_DOMAIN}{uri} permanent
+}
+
+terminal.138-3-216-172.sslip.io, share.138-3-216-172.sslip.io {
+	redir https://terminal.{$NINEGAGE_DOMAIN}{uri} permanent
+}

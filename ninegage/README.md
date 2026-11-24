@@ -8,7 +8,7 @@ Nine-Gage（UeEmon/Nine-Gage-Systems）を、CHUCKなどと別のVMで動かす�
 | ステージング（mainの最新 = `:main`） | `https://staging.<NINEGAGE_DOMAIN>` | Caddyのパスワード（`env/staging-auth.env`、ユーザー名 `staging`）と、ステージング自身のログイン |
 | ターミナル（レイアウトの共有。最新のリリース = `ghcr.io/ueemon/nine-gage-terminal:stable`） | `https://terminal.<NINEGAGE_DOMAIN>` | 見るのはだれでも。投稿は本番の SenroLab のアカウント（本番がログインを確かめて渡す） |
 
-`NINEGAGE_DOMAIN` は、独自ドメインを取るまでは、このVMの予約済み公開IPのドットをハイフンにした `<IP>.sslip.io` です。ドメインを取ったら `.env` の `NINEGAGE_DOMAIN` を変えて `bin/up.sh` するだけで移れます（DNSのAレコードをこのVMのIPに向けておく）。
+`NINEGAGE_DOMAIN` は `senrolab.com`（2026-11-25から。DNSはCloudflareで、`senrolab.com`・`staging`・`terminal`・`share` のAレコードがこのVMの予約済み公開IPを指す。プロキシはせず「DNSのみ」）。それまでの `138-3-216-172.sslip.io`（と `staging.`・`terminal.`・`share.`）は、Caddyが新しいドメインへ転送します（`caddy/Caddyfile` の最後）。ドメインを変えるときは、DNSのAレコードをこのVMに向けてから `.env` の `NINEGAGE_DOMAIN` を変えて `bin/up.sh` します。
 
 ## 分離のしかた
 
