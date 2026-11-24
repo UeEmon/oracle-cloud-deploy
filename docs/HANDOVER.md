@@ -19,6 +19,7 @@
 - 2026-11-16、所有者の指示でNine-Gageのユーザーと設定（`env/ninegage.env` を含む）を `chuck-1` から `ninegage-1` へ移し、`chuck-1` のNine-Gage（本番・ステージング）を止める。古いURLは新しいVMへ転送する。`chuck-1` の移す前のデータはボリューム `ninegage-data` に残す。
 - 2026-11-16、所有者の指示で基盤を整理する。残すのは `chuck-1` のCHUCK公開版・管理サイト／試験シミュレーター・公開データ取得／位置ゲートウェイ・要件ナビ・BACCHUSと、`ninegage-1`。海日和（`ocean-data`、UeEmon/OpenWeather）とNine-Gageの旧URL転送は `chuck-1` から外してデータも消す。ペーパークラフトジェネレーターは `ninegage-1` の別コンテナへ移し、VM `papercraft-1` とそのサブネット・セキュリティ・リストは削除する。
 - 2026-11-25、所有者がドメイン `senrolab.com`（Cloudflare）を取得。所有者の指示で、DNS（Aレコード: ルート・staging・terminal・share → `ninegage-1`、DNSのみ）を設定し、`ninegage-1` の `NINEGAGE_DOMAIN` を `senrolab.com` に切り替えた。古い `138-3-216-172.sslip.io` 系は新しいドメインへ転送する。CloudflareのDNS用トークンは所有者のMacの `~/.chuck-deploy/ninegage/cloudflare.env`。
+- 2026-11-25、所有者の指示で `www.senrolab.com` にトップページを作り、ログイン・登録・アカウントをそこへ移す。エディタ（プラットフォーム）は `platform.senrolab.com`（所有者が選択）。`senrolab.com` は `/` を www へ、ほかを platform へ転送。登録の確認メールとパスワード再設定のメールは OCI Email Delivery で送る（所有者の指示）。DNS に `platform` のAレコードを足してから、この構成を反映する。
 - 当面は1 OCPU・6GBで作り、空きが出たら2 OCPU・12GBに戻す（所有者の指示）。
 - 検証が終わったら、確認なしで後片付けまで自動で行う（既存の資源には触れない）。所有者の指示。
 - パスワード、ハッシュ以外の鍵、`.env` 類はリポジトリに入れない。このリポジトリは公開。

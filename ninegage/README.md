@@ -4,11 +4,12 @@ Nine-Gage（UeEmon/Nine-Gage-Systems）を、CHUCKなどと別のVMで動かす�
 
 | サイト | URL | ログイン |
 |---|---|---|
-| 本番（最新のリリース `v*` = イメージ `:stable`） | `https://<NINEGAGE_DOMAIN>` | Nine-Gage自身のログイン |
+| 本番のトップページ（ログイン・登録・アカウント） | `https://www.<NINEGAGE_DOMAIN>` | Nine-Gage自身のログイン（プラットフォームと共有） |
+| 本番のプラットフォーム（エディタ。最新のリリース `v*` = イメージ `:stable`） | `https://platform.<NINEGAGE_DOMAIN>` | トップページでログイン |
 | ステージング（mainの最新 = `:main`） | `https://staging.<NINEGAGE_DOMAIN>` | Caddyのパスワード（`env/staging-auth.env`、ユーザー名 `staging`）と、ステージング自身のログイン |
 | ターミナル（レイアウトの共有。最新のリリース = `ghcr.io/ueemon/nine-gage-terminal:stable`） | `https://terminal.<NINEGAGE_DOMAIN>` | 見るのはだれでも。投稿は本番の SenroLab のアカウント（本番がログインを確かめて渡す） |
 
-`NINEGAGE_DOMAIN` は `senrolab.com`（2026-11-25から。DNSはCloudflareで、`senrolab.com`・`staging`・`terminal`・`share` のAレコードがこのVMの予約済み公開IPを指す。プロキシはせず「DNSのみ」）。それまでの `138-3-216-172.sslip.io`（と `staging.`・`terminal.`・`share.`）は、Caddyが新しいドメインへ転送します（`caddy/Caddyfile` の最後）。ドメインを変えるときは、DNSのAレコードをこのVMに向けてから `.env` の `NINEGAGE_DOMAIN` を変えて `bin/up.sh` します。
+`NINEGAGE_DOMAIN` は `senrolab.com`（2026-11-25から。DNSはCloudflareで、`senrolab.com`・`www`・`platform`・`staging`・`terminal`・`share` のAレコードがこのVMの予約済み公開IPを指す。プロキシはせず「DNSのみ」）。トップページ（`www.`）とプラットフォーム（`platform.`）は同じ本番コンテナで、アプリが Host で振り分け、ログインの Cookie を `NINEGAGE_DOMAIN` 全体で共有します（`NINEGAGE_HOME_URL`・`NINEGAGE_PUBLIC_URL`・`NINEGAGE_COOKIE_DOMAIN`、`compose.yaml`）。ドメインそのもの（`senrolab.com`）は、`/` をトップページへ、ほかのパスをプラットフォームへ転送します（2026-11-25までのエディタのアドレス）。それまでの `138-3-216-172.sslip.io`（と `staging.`・`terminal.`・`share.`）は、Caddyが新しいドメインへ転送します（`caddy/Caddyfile` の最後）。ドメインを変えるときは、DNSのAレコードをこのVMに向けてから `.env` の `NINEGAGE_DOMAIN` を変えて `bin/up.sh` します。
 
 ## 分離のしかた
 
@@ -65,6 +66,21 @@ CHUCKのVM（`chuck-1`）で動いている本番のユーザーとAI設定を�
    以前の `store.json` は、起動時に `store.sqlite` へ取り込まれ、`store.json.migrated` に名前が変わる。
 4. 新しいURLでログインできること、ユーザーがそろっていることを確かめる。
 5. `chuck-1` 側で、Nine-Gageのサービスを外し、`nine-gage.<CHUCKのドメイン>` を新しいURLへ転送する（別のPRで行う）。運んだ `ninegage-data.tar.gz` は確かめたら消す。
+
+## メール（OCI Email Delivery）
+
+ユーザー登録の確認メールとパスワード再設定のメールは、OCI Email Delivery（東京）から送ります。設定は所有者のMac（OCI CLI と Cloudflare のトークン）から行います。
+
+1. メールドメイン `senrolab.com` を作り、DKIM を作る。表示された CNAME（`<selector>._domainkey.senrolab.com`）を Cloudflare に「DNSのみ」で足す。
+2. SPF の TXT レコード `v=spf1 include:ap.rp.oracleemaildelivery.com ~all` を `senrolab.com` に足す（ほかに SPF があればまとめる）。
+3. 承認済み送信者 `noreply@senrolab.com` を作る。
+4. 送信専用の IAM ユーザーを作り、SMTP 資格情報を発行する（グループに `Allow group <group> to use email-family in tenancy`）。
+5. VM の `env/ninegage.env` に入れて `bin/up.sh`（ユーザー名とパスワードは URL エンコード）。
+   ```sh
+   NINEGAGE_SMTP_URL=smtp://<SMTPユーザー名>:<SMTPパスワード>@smtp.email.ap-tokyo-1.oci.oraclecloud.com:587
+   NINEGAGE_MAIL_FROM="SenroLab <noreply@senrolab.com>"
+   ```
+   アプリは `smtp://` で STARTTLS を必ず使います。SMTP 資格情報は所有者のMacの `~/.chuck-deploy/ninegage/` にも控えます。
 
 ## バックアップ
 
